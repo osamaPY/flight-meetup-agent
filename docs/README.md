@@ -1,29 +1,24 @@
 # Flight Meet Agent - Documentation
 
 ## 🗺 Overview
-Flight Meet Agent is a personal flight discovery tool designed to find the cheapest European cities for two people (one in Milan, one in Riga) to meet up.
+Flight Meet Agent is a high-performance engine to find the cheapest European meetups between Milan and Riga. It uses a "near-€0" philosophy, leveraging free data for broad scans and paid APIs only for final verification.
 
 ## 🏗 Architecture
-The project follows a **Provider-based Architecture**, allowing it to scale across multiple flight data sources while remaining resilient to API failures.
-
-- **Storage**: SQLite database (`flights.db`) for tracking history, best prices, and API budgets.
-- **Providers**: Unified interface for Ryanair, Travelpayouts, SerpApi (Google Flights), SkyScrapper (RapidAPI), and FlightAPI.io.
-- **Scoring**: A custom engine that calculates "Fairness" to ensure neither person pays a disproportionate amount.
-- **Interfaces**: Fully interactive Telegram Bot and a secondary CLI menu.
+- **Storage**: SQLite (`flights.db`) with 18-hour "Smart Skip" caching.
+- **Providers**: Unified layer for Ryanair, Duffel, Booking.com, Travelpayouts, and Google Flights.
+- **Verification**: Tiered verification system that confirms cheap deals using high-quality sources before notifying.
+- **Automation**: Designed to run as a Systemd service on AWS EC2.
 
 ## 🚀 Key Features
+- **Exhaust Mode**: Scans 130+ Schengen destinations across a 4-month horizon.
 - **Fair-Deal Ranking**: Prioritizes trips where costs are balanced between both travelers.
-- **Multi-Origin Scanning**: Searches multiple airports (BGY, MXP, LIN) for Milan and RIX for Riga.
-- **Mobile First**: Control scans, view results, and check health directly from Telegram.
-- **Price History**: Tracks all-time best prices to identify true "drops".
-- **Budget Protection**: Hard guards on paid APIs (like SerpApi) to keep costs at €0.
+- **Mobile UI**: Full bot control with real-time status updates and monthly grouped results.
+- **Self-Healing**: Robust retry logic with jitter and automatic health monitoring.
 
 ## 📁 File Structure
-- `main.py`: Application entry point and CLI menu.
-- `telegram_bot.py`: Main interactive interface.
-- `providers.py`: Provider abstraction layer.
-- `scoring.py`: Scoring and ranking logic.
-- `airports.py`: Destination metadata and flags.
-- `storage.py`: SQLite persistence layer.
-- `notifier.py`: Telegram message formatting.
-- `*_client.py`: Specific API implementations.
+- `.\main.py`: Core scanning and CLI entry point.
+- `.\telegram_bot.py`: Interactive mobile interface.
+- `.\src\core\providers.py`: API abstraction and retry logic.
+- `.\src\core\airports.py`: Massive list of 130+ Schengen airports.
+- `.\src\core\scoring.py`: Ranking and fairness calculation.
+- `.\src\clients\`: Raw API clients (Duffel, Booking.com, etc).

@@ -356,11 +356,11 @@ def main() -> None:
             elif choice == "5": test_providers(providers)
             elif choice == "6": selftest(storage, notifier, providers)
             elif choice == "7": 
-                notifier.send_message("Test message from Flight Meet Agent")
-                print("Test message sent.")
+                notifier.send_message("Test message")
+                print("Sent.")
             elif choice == "8": storage.clear_results()
             elif choice == "0": break
-            else: print("Invalid choice.")
+            else: print("Err.")
     else:
         if cmd in ["monitor", "search"]: monitor_mode(storage, notifier, providers)
         elif cmd == "verify": verify_mode(storage, notifier, providers)
@@ -368,9 +368,8 @@ def main() -> None:
         elif cmd == "discover": discover_mode(providers)
         elif cmd in ["health", "test"]: test_providers(providers)
         elif cmd == "selftest": selftest(storage, notifier, providers)
-        elif cmd == "telegram-test": notifier.send_message("Direct test message")
         elif cmd == "clear": storage.clear_results()
-        else: print(f"Unknown command: {cmd}")
+        else: print(f"Unknown: {cmd}")
 
     storage.export_csv()
 

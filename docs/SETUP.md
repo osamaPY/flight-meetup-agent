@@ -3,36 +3,25 @@
 ## 🛠 Prerequisites
 - Python 3.11+
 - SQLite
+- AWS EC2 (t3.micro recommended)
 
 ## 📥 Installation
-1. Clone the repository.
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Copy `.env.example` to `.env`.
+1. `git clone https://github.com/osamaPY/flightAgent.git`
+2. `pip install -r requirements.txt`
+3. Configure `.env` (use `.env.example` as a base).
 
 ## 🔑 Environment Variables
-| Variable | Description | Source |
-|----------|-------------|--------|
-| `TELEGRAM_BOT_TOKEN` | Token for your bot | @BotFather |
-| `TELEGRAM_CHAT_ID` | Your chat ID | Use `/selftest` or a bot |
-| `TRAVELPAYOUTS_TOKEN` | API Token | Travelpayouts |
-| `SERPAPI_KEY` | Google Flights API | SerpApi |
-| `RAPIDAPI_KEY` | Sky Scrapper API | RapidAPI |
-| `FLIGHTAPI_KEY` | FlightAPI.io Token | FlightAPI.io |
-| `TARGET_PRICE_EUR` | Max combined price for alerts | Optional (default: 200) |
+| Variable | Description |
+|----------|-------------|
+| `TELEGRAM_BOT_TOKEN` | Bot API token from @BotFather |
+| `DUFFEL_TOKEN` | Duffel API key |
+| `TRAVELPAYOUTS_TOKEN` | Travelpayouts token |
+| `RAPIDAPI_KEY` | Key for Booking.com/Kiwi providers |
 
-## 🚀 Running the App
-- **Telegram (Recommended)**:
-  ```bash
-  python telegram_bot.py
-  ```
-- **CLI Menu**:
-  ```bash
-  python main.py
-  ```
-- **Direct Scan**:
-  ```bash
-  python main.py monitor
-  ```
+## 🚀 VPS Deployment
+To run 24/7 as an unbreakable service:
+```bash
+sudo systemctl enable flightbot
+sudo systemctl start flightbot
+```
+Check logs: `journalctl -u flightbot -f`
