@@ -48,13 +48,9 @@ def get_best_flight(origins: List[str], destination: str, out_from: str, out_to:
             except Exception as e:
                 log_error(f"Error in {p.name()} search: {e}")
                 continue
-        
-        # Early Exit: If we found a Ryanair flight under 60 EUR, it's unlikely others beat it by much
-        if best and best.price < 60.0 and best.source == "ryanair":
-            return best
 
     # If no flight found or price is high, try slow providers as fallback
-    if not skip_slow and (not best or best.price > 100.0):
+    if not skip_slow and (not best or best.price > 40.0):
         for origin in origins:
             if origin == destination:
                 continue
@@ -147,9 +143,9 @@ def monitor_mode(storage: Storage, notifier: Notifier, providers: List[FlightPro
         if progress_callback: progress_callback(i + 1, total_steps, dest.city)
         log_info(f"Scanning {dest.iata} ({dest.city})...")
 
-        # Parallelize DATE_WINDOWS for this city - SKIP SLOW during monitor
+        # Parallelize DATE_WINDOWS for this city - EXHAUSTIVE SCAN
         with ThreadPoolExecutor(max_workers=4) as window_executor:
-            futures = [window_executor.submit(process_window, dest.iata, window, True) for window in DATE_WINDOWS]
+            futures = [window_executor.submit(process_window, dest.iata, window, False) for window in DATE_WINDOWS]
             for future in concurrent.futures.as_completed(futures):
                 res = future.result()
                 if res:
