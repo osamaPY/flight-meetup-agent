@@ -201,35 +201,56 @@ async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.reply_text("📭 No results.")
         return
 
-    text = "💎 **Best Fair Meetups**\n\n"
+    text = "💎 **Best Monthly Deals**\n\n"
     
+    # Group by month
+    months = {}
     seen = set()
-    count = 0
+    
     for row in rows:
         dest, total, out, ret, a_org, a_p, b_org, b_p, gap, fairness = row
-        
         key = (dest, out, ret)
         if key in seen: continue
         seen.add(key)
         
-        from src.core.airports import CANDIDATE_DESTINATIONS
-        dest_info = next((a for a in CANDIDATE_DESTINATIONS if a.iata == dest), None)
-        city = dest_info.city if dest_info else dest
-        flag = dest_info.flag if dest_info else "📍"
+        month_key = out[:7] # YYYY-MM
+        if month_key not in months:
+            months[month_key] = []
+        months[month_key].append(row)
+
+    from src.core.airports import CANDIDATE_DESTINATIONS
+    from src.core.scoring import generate_booking_link
+
+    # Sort months
+    for month_key in sorted(months.keys()):
+        month_name = datetime.strptime(month_key, "%Y-%m-%d").strftime("%B %Y") if len(month_key) == 10 else month_key
+        # If month_key is just YYYY-MM, we need to handle it
+        try:
+            month_name = datetime.strptime(month_key, "%Y-%m").strftime("%B %Y")
+        except:
+            month_name = month_key
+            
+        text += f"📅 **{month_name}**\n"
         
-        fairness_label = "✅ Balanced" if fairness < 15 else "⚖️ Fair" if fairness < 30 else "⚠️ Lopsided"
-        
-        text += (
-            f"{flag} **{city}** ({dest})\n"
-            f"📅 {out} to {ret}\n"
-            f"💰 €{total:.2f} | {fairness_label}\n"
-            f"🅰️: €{a_p:.2f} | 🅱️: €{b_p:.2f}\n"
-            f"🔗 [Book A]({link_a}) | [Book B]({link_b})\n\n"
-        )
-        
-        count += 1
-        if count >= 6: break
-    
+        count = 0
+        for row in months[month_key]:
+            dest, total, out, ret, a_org, a_p, b_org, b_p, gap, fairness = row
+            
+            dest_info = next((a for a in CANDIDATE_DESTINATIONS if a.iata == dest), None)
+            city = dest_info.city if dest_info else dest
+            flag = dest_info.flag if dest_info else "📍"
+            
+            link_a = generate_booking_link(a_org, dest, out, ret)
+            link_b = generate_booking_link(b_org, dest, out, ret)
+            
+            text += (
+                f"{flag} {city} (€{total:.0f}) | {out[8:]}-{ret[8:]}\n"
+                f"🔗 [A]({link_a}) | [B]({link_b})\n"
+            )
+            count += 1
+            if count >= 5: break # Top 5 per month
+        text += "\n"
+
     await msg.reply_text(text, parse_mode='Markdown', disable_web_page_preview=True)
     
 async def cmd_discover(update: Update, context: ContextTypes.DEFAULT_TYPE):
