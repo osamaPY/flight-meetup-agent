@@ -263,11 +263,13 @@ async def cmd_discover(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_health(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     _, _, providers = get_app_context()
-    text = "Health:\n"
+    text = "🏥 **Provider Health**\n\n"
     for p in providers:
-        status = "OK" if p.is_healthy() else "Err"
-        text += f"{p.name()}: {status}\n"
-    await msg.reply_text(text)
+        is_ok = p.is_healthy()
+        status = "✅ OK" if is_ok else "❌ Err"
+        reason = f" ({p.get_health_reason()})" if not is_ok else ""
+        text += f"**{p.name()}**: {status}{reason}\n"
+    await msg.reply_text(text, parse_mode='Markdown')
 
 async def cmd_selftest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
