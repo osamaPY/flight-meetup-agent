@@ -113,6 +113,7 @@ def _build_registry() -> List[ProviderSpec]:
     """
     from src.core.config import Config
     from src.core.providers import (
+        AmadeusProvider,
         DuffelProvider,
         GoogleScraperProvider,
         MultiGoogleScraperProvider,
@@ -128,6 +129,13 @@ def _build_registry() -> List[ProviderSpec]:
         # the exact-date (VERIFICATION) search, so it is non-breaking today; a
         # future calendar-first discovery pipeline pulls it via tier=DISCOVERY.
         ProviderSpec(RyanairCalendarProvider.CAPABILITIES, RyanairCalendarProvider),
+        # Free-tier GDS: independent verification voice, enabled once a key is set.
+        ProviderSpec(
+            AmadeusProvider.CAPABILITIES,
+            AmadeusProvider,
+            enabled=lambda: bool(Config.AMADEUS_CLIENT_ID
+                                 and Config.AMADEUS_CLIENT_SECRET),
+        ),
         # Paid GDS: verification voice only, budget-gated.
         ProviderSpec(
             DuffelProvider.CAPABILITIES,

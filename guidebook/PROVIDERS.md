@@ -35,6 +35,7 @@ checks inside `get_best_flight`.
 | `RyanairCalendarProvider` | Ryanair `cheapestPerDay` calendar | Free | Discovery | Whole-month fare surface in ~1 call/route (approximate) |
 | `GoogleScraperProvider` | `fast-flights` Google Flights Protobuf | Free | Both | Broad airline coverage (aggregator breadth) |
 | `MultiGoogleScraperProvider` | Google Flights queried in direct/all/calendar modes | Free | Both | Wider search coverage and backup signal |
+| `AmadeusProvider` | Amadeus Self-Service API | Free (test tier, keyed) | Verification | Independent multi-airline GDS offers; enabled once a key is set |
 | `DuffelProvider` | Duffel GDS API | Paid | Verification | Independent bookable GDS offers and confidence |
 
 ## Direct-Airline Coverage Reality (probed 2026-07-05)
@@ -54,8 +55,10 @@ CAPTCHA/proxy evasion, which is out of scope:
 | Kiwi (skypicker) | 404 (endpoint deprecated; Tequila needs a key) |
 
 Consequence: every non-Ryanair airline's **fares** reach us via the Google
-aggregator, not via direct readers. The registry makes adding a source trivial
-the moment a consenting endpoint (or an Amadeus/other API key) becomes available.
+aggregator, not via direct readers. For more coverage the sanctioned path is a
+free API key: `AmadeusProvider` is already wired in and activates the moment you
+set `AMADEUS_CLIENT_ID` / `AMADEUS_CLIENT_SECRET` (free test tier, no card). The
+registry makes adding further sources a one-entry change.
 
 ## Duffel Safety
 

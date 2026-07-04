@@ -390,6 +390,46 @@ class MultiGoogleScraperProvider(FlightProvider):
 
 
 # ---------------------------------------------------------------------------
+# Amadeus - free-tier GDS (VERIFICATION tier, key required)
+# ---------------------------------------------------------------------------
+
+class AmadeusProvider(FlightProvider):
+    """Amadeus Self-Service offers. Free test tier, an independent GDS voice
+    alongside Duffel. Enabled only when a key is configured."""
+
+    CAPABILITIES = ProviderCapabilities(
+        key="amadeus",
+        label="Amadeus",
+        airline=None,            # GDS - multi-airline
+        region="GLOBAL",
+        cost="free",             # free test tier (has a monthly quota)
+        freshness="live",
+        bookable=True,           # real priced offers
+        has_round_trip=True,
+        has_one_way=False,
+        has_calendar=False,
+        tiers=frozenset({VERIFICATION}),
+    )
+
+    def __init__(self):
+        super().__init__()
+        from src.clients.amadeus_client import AmadeusClient
+        self.client = AmadeusClient()
+
+    def name(self) -> str:
+        return "Amadeus"
+
+    def search_round_trip(self, origin, dest, out_from, out_to, in_from, in_to):
+        try:
+            return self.client.search_round_trip(origin, dest, out_from, in_from)
+        except Exception:
+            return None
+
+    def _live_health_check(self) -> bool:
+        return bool(self.client.available())
+
+
+# ---------------------------------------------------------------------------
 # 5. Ryanair Calendar - DISCOVERY tier
 # ---------------------------------------------------------------------------
 

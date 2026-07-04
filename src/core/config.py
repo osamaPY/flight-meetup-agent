@@ -33,6 +33,12 @@ class Config:
     # ── Duffel (optional paid GDS provider) ──
     DUFFEL_TOKEN = os.getenv("DUFFEL_TOKEN")
 
+    # ── Amadeus Self-Service (optional, FREE test tier - real GDS offers) ──
+    # Free key at developers.amadeus.com. HOSTNAME is "test" (free) or "production".
+    AMADEUS_CLIENT_ID = os.getenv("AMADEUS_CLIENT_ID", "")
+    AMADEUS_CLIENT_SECRET = os.getenv("AMADEUS_CLIENT_SECRET", "")
+    AMADEUS_HOSTNAME = os.getenv("AMADEUS_HOSTNAME", "test")
+
     # ── DeepSeek LLM (optional AI concierge in the Telegram bot) ──
     DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
     DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")

@@ -51,7 +51,7 @@ python flight_api_server.py # optional REST API on :8000
 
 ## How it's built
 
-The stack is Python: `python-telegram-bot` for the bot, SQLite (WAL) for storage, `fast-flights` for Google Flights data, Ryanair's public API, optional Duffel, DeepSeek for the LLM bits, and a small FastAPI server on the side for debugging.
+The stack is Python: `python-telegram-bot` for the bot, SQLite (WAL) for storage, `fast-flights` for Google Flights data, Ryanair's public API, optional Amadeus (free tier) and Duffel GDS sources, DeepSeek for the LLM bits, and a small FastAPI server on the side for debugging.
 
 A few decisions worth explaining:
 
