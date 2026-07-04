@@ -61,7 +61,7 @@ best-effort), so L5 orders destinations by *fresh* prices, not only history.
 fail-open). `RyanairProvider` and `RyanairCalendarProvider` skip HTTP instantly
 when a route is provably not flown (e.g. BGY→JFK answers in ~0.2 ms instead of
 a wasted network call). Unknown graph → never prune. Google providers are
-unaffected, so coverage is unchanged — only guaranteed-empty calls are removed.
+unaffected, so coverage is unchanged - only guaranteed-empty calls are removed.
 
 ## L4: Flexible Dates
 

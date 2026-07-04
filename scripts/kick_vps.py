@@ -11,7 +11,7 @@ def kick_vps():
 
     print("Releasing bot from remote instance...")
     # v5.1: deleteWebhook + close frees the polling slot WITHOUT logging out.
-    # logOut is too aggressive — it invalidates the token for several minutes.
+    # logOut is too aggressive - it invalidates the token for several minutes.
     try:
         r1 = requests.get(
             f"https://api.telegram.org/bot{token}/deleteWebhook", timeout=10

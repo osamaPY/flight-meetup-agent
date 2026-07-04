@@ -5,12 +5,12 @@ The broken ones were removed entirely; their client modules have been
 deleted from src/clients/.
 
 ACTIVE PROVIDERS (4):
-  1. Ryanair             — Official API, 0.6s, free
-  2. GoogleScraper       — fast-flights Protobuf, 1.2s, free
-  3. Google Multi-Mode   — 3 search modes, free
-  4. Duffel              — GDS, 1.0s, PAID (token required)
+  1. Ryanair             - Official API, 0.6s, free
+  2. GoogleScraper       - fast-flights Protobuf, 1.2s, free
+  3. Google Multi-Mode   - 3 search modes, free
+  4. Duffel              - GDS, 1.0s, PAID (token required)
 
-v6: DUFFEL SAFETY — Duffel is paid-per-call. Guest users (non-owner friends)
+v6: DUFFEL SAFETY - Duffel is paid-per-call. Guest users (non-owner friends)
     get FREE providers only by default. Duffel has a daily budget cap with
     a kill-switch. Owner can override via DUFFEL_FOR_GUESTS=1.
 
@@ -35,7 +35,7 @@ from src.core.providers import (
 from src.core.storage import Storage
 
 # ---------------------------------------------------------------------------
-# v5: Cached health checks — avoids HTTP on every command
+# v5: Cached health checks - avoids HTTP on every command
 # ---------------------------------------------------------------------------
 _health_cache: dict = {}          # provider_name → (healthy_bool, timestamp, reason)
 _HEALTH_CACHE_TTL = 900           # 15 minutes
@@ -70,7 +70,7 @@ def flush_health_cache():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# v6: Duffel budget tracking (PAID provider — protect the owner's wallet)
+# v6: Duffel budget tracking (PAID provider - protect the owner's wallet)
 # ═══════════════════════════════════════════════════════════════════════════
 
 _duffel_calls_today: int = 0
@@ -131,7 +131,7 @@ def build_providers(
     """Build the default (exact-date) provider list.
 
     Delegates to the capability-tagged registry (src/core/provider_registry.py),
-    requesting VERIFICATION-tier providers — i.e. exactly today's live exact-date
+    requesting VERIFICATION-tier providers - i.e. exactly today's live exact-date
     search set. Discovery-only providers (e.g. Ryanair Calendar) are excluded
     here, so this stays byte-compatible with the previous hardcoded behavior.
 
@@ -143,7 +143,7 @@ def build_providers(
 
 
 def build_guest_providers(storage: Storage | None = None) -> List[FlightProvider]:
-    """Free-only providers — safe for guest friends."""
+    """Free-only providers - safe for guest friends."""
     return build_providers(storage, include_duffel=False)
 
 

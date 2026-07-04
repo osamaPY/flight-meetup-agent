@@ -1,4 +1,4 @@
-"""v5: Static HTML dashboard — SQLite → sortable HTML table.
+"""v5: Static HTML dashboard - SQLite → sortable HTML table.
 
 Zero framework, zero server. Generates one self-contained HTML file with:
 - Sortable table of all deals (click column headers to sort)
@@ -44,7 +44,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flight Meet — Deals Dashboard</title>
+<title>Flight Meet - Deals Dashboard</title>
 <style>
   :root {{ color-scheme: dark; }}
   body {{ font-family: system-ui, sans-serif; background: #1a1a2e; color: #eee; margin: 20px; }}
@@ -65,7 +65,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>Flight Meet — Deals Dashboard</h1>
+<h1>Flight Meet - Deals Dashboard</h1>
 <div class="stats">
   <div class="stat"><div class="val">{total_deals}</div><div class="label">Total deals</div></div>
   <div class="stat"><div class="val">EUR {best_price:.0f}</div><div class="label">Best grand total</div></div>
@@ -164,9 +164,9 @@ def build_dashboard(output_path: str = "data/dashboard.html") -> str:
             f"<td>EUR {float(total or 0):.0f}</td>"
             f"<td>EUR {extras:.0f}</td>"
             f"<td class=\"grand\">EUR {grand_f:.0f}</td>"
-            f"<td>{airlines or '—'}</td>"
+            f"<td>{airlines or '-'}</td>"
             f"<td><span class=\"badge\" style=\"background:{_conf_color(conf_str)}\">"
-            f"{conf_str or '—'}</span></td>"
+            f"{conf_str or '-'}</span></td>"
             f"<td>{float(pct or 0):.0f}%</td>"
             f"</tr>\n"
         )

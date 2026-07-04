@@ -7,7 +7,7 @@ Compatibility shims for removed/moved stdlib modules.
 
 
 def what(file, h=None):
-    """Minimal imghdr.what polyfill — always returns 'jpeg'."""
+    """Minimal imghdr.what polyfill - always returns 'jpeg'."""
     return "jpeg"
 
 

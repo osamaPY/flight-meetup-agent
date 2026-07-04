@@ -1,11 +1,11 @@
 """
-Flight Meetup Bot v7.0 — "One card" UI/UX rewrite
+Flight Meetup Bot v7.0 - "One card" UI/UX rewrite
 
 Design:
   * The UI is ONE message per chat that navigates like an app: every tap
     EDITS the card in place (no message spam). Screens: Home → Group Hub →
     Search Panel → Progress → Results → City Detail, with Back everywhere.
-  * Search setup is a SETTINGS PANEL with smart defaults — launch is 1 tap;
+  * Search setup is a SETTINGS PANEL with smart defaults - launch is 1 tap;
     tap any row to change it. (Replaces the old 6-step linear wizard.)
   * Live progress actually works now: a sync callback from the search thread
     schedules edits on the event loop into the REQUESTER's chat
@@ -110,7 +110,7 @@ async def _show(update, context, text, rows=None):
         except BadRequest as e:
             if "not modified" in str(e).lower():
                 return q.message
-            # fall through — send a fresh card
+            # fall through - send a fresh card
     return await update.effective_message.reply_text(
         text, parse_mode='HTML',
         disable_web_page_preview=True, reply_markup=markup)
@@ -135,7 +135,7 @@ async def scr_home(update, context):
     if groups:
         text = (
             "✈️ <b>Flight Meetup</b>\n"
-            "Pick a group — or create a new one.\n"
+            "Pick a group - or create a new one.\n"
         )
         rows = []
         for g in groups[:8]:
@@ -146,11 +146,11 @@ async def scr_home(update, context):
         text = (
             "✈️ <b>Flight Meetup</b>\n\n"
             "Find the cheapest &amp; fairest city for you and your friends "
-            "to meet — flights, bags and transfers all included in one "
+            "to meet - flights, bags and transfers all included in one "
             "true price.\n\n"
             "① Create a group\n"
             "② Friends join with one tap\n"
-            "③ Launch a search — I do the rest\n"
+            "③ Launch a search - I do the rest\n"
         )
         rows = []
 
@@ -162,7 +162,7 @@ async def scr_home(update, context):
 
 
 async def scr_hub(update, context, gid):
-    """Group Hub — the centerpiece: members, status, all actions."""
+    """Group Hub - the centerpiece: members, status, all actions."""
     s = Storage()
     g = s.get_group(gid)
     if not g:
@@ -175,7 +175,7 @@ async def scr_hub(update, context, gid):
     lines = [f"✈️ <b>{esc(g['name'])}</b>", ""]
     for m in members:
         who = "You" if m['telegram_id'] == me else esc(m['username'])
-        lines.append(f"👤 {who} — {esc(', '.join(m['origins']))}")
+        lines.append(f"👤 {who} - {esc(', '.join(m['origins']))}")
     if len(members) < 2:
         lines += ["", "💡 Invite at least 1 friend to search together."]
 
@@ -214,7 +214,7 @@ async def scr_invite(update, context, gid):
              f"&text=Join%20my%20flight%20meetup%20group!")
     text = (
         f"📤 <b>Invite friends to {esc(g['name'])}</b>\n\n"
-        f"Send them this link — one tap and they're in:\n\n"
+        f"Send them this link - one tap and they're in:\n\n"
         f"{link}\n\n"
         f"<i>They'll be asked where they fly from, then everything "
         f"else is buttons.</i>"
@@ -247,10 +247,10 @@ async def scr_help(update, context):
         "❓ <b>How it works</b>\n\n"
         "You and your friends live in different cities and want to meet "
         "somewhere. I search every destination and date combo, and rank "
-        "cities by the <b>true all-in cost</b> for the whole group — "
+        "cities by the <b>true all-in cost</b> for the whole group - "
         "flights + luggage fees + airport transfers.\n\n"
         "① <b>Create a group</b>, share the invite link\n"
-        "② Everyone types where they fly from — city names are fine "
+        "② Everyone types where they fly from - city names are fine "
         "(\"milan\", \"riga\")\n"
         "③ <b>Search now</b> uses smart defaults, or customize dates, "
         "nights, bags, transfers, scope\n"
@@ -259,9 +259,9 @@ async def scr_help(update, context):
         "🔎 check the live price before booking\n\n"
         "<b>Reading results</b>\n"
         "💎 All-in = flights + bags + transfers\n"
-        "🟢 confirmed by multiple sources · 🔵 single source — verify\n"
+        "🟢 confirmed by multiple sources · 🔵 single source - verify\n"
         "Bars show who pays more (fairness).\n\n"
-        "<i>Prices move fast — always tap 🔎 before booking.</i>"
+        "<i>Prices move fast - always tap 🔎 before booking.</i>"
     )
     await _show(update, context, text, [[HOME_BTN]])
 
@@ -345,8 +345,8 @@ async def scr_panel_setting(update, context, gid, key):
              _btn("3 nights", f"cfgv_{gid}_nights_3_3")],
             [_btn("4 nights", f"cfgv_{gid}_nights_4_4"),
              _btn("5 nights", f"cfgv_{gid}_nights_5_5")],
-            [_btn("Flexible 2–4", f"cfgv_{gid}_nights_2_4"),
-             _btn("Flexible 3–7", f"cfgv_{gid}_nights_3_7")],
+            [_btn("Flexible 2-4", f"cfgv_{gid}_nights_2_4"),
+             _btn("Flexible 3-7", f"cfgv_{gid}_nights_3_7")],
             [back],
         ]
         await _show(update, context, base + "\n\n🌙 <b>How long?</b>", rows)
@@ -429,7 +429,7 @@ async def launch_search(update, context, gid, cfg=None):
         await _show(update, context,
                     f"👥 <b>{esc(g['name'])}</b> needs at least 2 members "
                     f"before a search makes sense.\n\n"
-                    f"Invite a friend first — one tap for them to join.",
+                    f"Invite a friend first - one tap for them to join.",
                     [[_btn("📤 Invite friends", f"inv_{gid}")],
                      [_btn("⬅️ Back", f"hub_{gid}")]])
         return
@@ -508,7 +508,7 @@ async def launch_search(update, context, gid, cfg=None):
             stopped = " (stopped early)" if summary.stopped else ""
 
             done = (
-                f"✅ <b>Search done{stopped} — {esc(group_name)}</b>\n\n"
+                f"✅ <b>Search done{stopped} - {esc(group_name)}</b>\n\n"
                 f"🏆 {len(summary.results)} deals in {len(cities)} cities"
                 f" · {secs // 60}m{secs % 60}s\n\n"
                 f"Everyone in the group has been notified."
@@ -533,7 +533,7 @@ async def launch_search(update, context, gid, cfg=None):
                         parse_mode='HTML', reply_markup=_kb(
                             [[_btn("🏆 See the deals", f"res_{gid}")]]))
                 except Exception:
-                    pass  # member never started the bot — skip silently
+                    pass  # member never started the bot - skip silently
         except Exception as e:
             log_error(f"search run failed: {e}")
             try:
@@ -581,14 +581,14 @@ async def scr_results(update, context, gid, page=0):
     search, results, deduped = _load_deals(context, gid)
     if search is None:
         await _show(update, context,
-                    f"🏆 <b>{esc(g['name'])}</b>\n\nNo searches yet — "
+                    f"🏆 <b>{esc(g['name'])}</b>\n\nNo searches yet - "
                     f"launch the first one!",
                     [[_btn("🚀 Search now", f"go_{gid}")],
                      [_btn("⬅️ Back", f"hub_{gid}")]])
         return
     if not results:
         status = search.get('status', '?')
-        hint = ("Still searching — I'll ping you when it's done."
+        hint = ("Still searching - I'll ping you when it's done."
                 if status == 'running' else "The search found no deals.")
         await _show(update, context,
                     f"🏆 <b>{esc(g['name'])}</b>\n\n{hint}",
@@ -663,7 +663,7 @@ async def scr_city(update, context, gid, dest):
 async def cb_verify(update, context, rid):
     q = update.callback_query
     note = await q.message.reply_text(
-        "🔎 Checking live prices — this takes 20–60 seconds…")
+        "🔎 Checking live prices - this takes 20-60 seconds…")
     result = await asyncio.to_thread(
         verify_result, Storage(), rid, _is_owner(update))
     status = str(result.get('status', 'unknown')).replace('_', ' ')
@@ -708,11 +708,11 @@ async def cb_ai_pick(update, context, gid):
     text = await asyncio.to_thread(ai.recommend_meetup, deals, name)
     if not text:
         await note.edit_text(
-            "✨ The AI concierge is unavailable right now — but the list is "
+            "✨ The AI concierge is unavailable right now - but the list is "
             "already sorted cheapest-first, so #1 is your best-value pick.")
         return
     await note.edit_text(
-        f"✨ <b>AI pick — {esc(name)}</b>\n\n{esc(text)}\n\n"
+        f"✨ <b>AI pick - {esc(name)}</b>\n\n{esc(text)}\n\n"
         f"<i>AI suggestion from the real computed deals. "
         f"Always tap 🔎 to verify the live price before booking.</i>",
         parse_mode='HTML')
@@ -742,7 +742,7 @@ async def cb_ai_city(update, context, gid, dest):
         await note.edit_text("✨ AI ideas aren't available right now.")
         return
     await note.edit_text(
-        f"✨ <b>{esc(city)} — {nights}-night ideas</b>\n\n{esc(text)}\n\n"
+        f"✨ <b>{esc(city)} - {nights}-night ideas</b>\n\n{esc(text)}\n\n"
         f"<i>AI-generated inspiration.</i>", parse_mode='HTML')
 
 
@@ -767,7 +767,7 @@ async def _ask_airports(update, context, purpose, gid=None, gname=None,
     where = f" for <b>{esc(group_label)}</b>" if group_label else ""
     await update.effective_message.reply_text(
         f"🛫 <b>Where do you fly from{where}?</b>\n\n"
-        "Type a city or airport code — several are fine:\n"
+        "Type a city or airport code - several are fine:\n"
         "<i>milan</i> · <i>riga</i> · <i>BGY, MXP</i> · <i>london</i>",
         parse_mode='HTML')
 
@@ -784,7 +784,7 @@ def _ap_keyboard(ap):
 
 def _ap_text(ap):
     picked = ap['base'] + [i for i, on in ap['sel'].items() if on]
-    lines = ["🛫 <b>Got it — confirm your airports</b>", ""]
+    lines = ["🛫 <b>Got it - confirm your airports</b>", ""]
     if ap['base']:
         lines.append("✓ " + ", ".join(ui.airport_label(i) for i in ap['base']))
     if ap['sel']:
@@ -806,7 +806,7 @@ async def _handle_origins_text(update, context, awaiting):
     accepted_unknown = [u for u in unknown if len(u) == 3 and u.isalpha()]
     if not resolved and not suggestions and not accepted_unknown:
         await update.effective_message.reply_text(
-            "I couldn't find that — try a city (<i>milan</i>) or a "
+            "I couldn't find that - try a city (<i>milan</i>) or a "
             "3-letter airport code (<i>BGY</i>).", parse_mode='HTML')
         context.user_data['await'] = awaiting  # keep waiting
         return
@@ -846,7 +846,7 @@ async def _finish_airports(update, context, origins, purpose, gid, gname):
         await update.effective_message.reply_text(
             f"✅ <b>{esc(g['name'])} is ready!</b>\n\n"
             f"👤 You fly from: {esc(', '.join(origins))}\n\n"
-            f"Now invite your friends — one tap and they're in:\n{link}",
+            f"Now invite your friends - one tap and they're in:\n{link}",
             parse_mode='HTML', disable_web_page_preview=True,
             reply_markup=_kb([
                 [InlineKeyboardButton("📨 Share via Telegram", url=share)],
@@ -866,7 +866,7 @@ async def _finish_airports(update, context, origins, purpose, gid, gname):
                 await context.bot.send_message(
                     chat_id=int(g['created_by']),
                     text=f"👋 <b>{esc(_uname(update))}</b> joined "
-                         f"<b>{esc(g['name'])}</b> — "
+                         f"<b>{esc(g['name'])}</b> - "
                          f"{len(members)} member{'s' if len(members) != 1 else ''} now.",
                     parse_mode='HTML',
                     reply_markup=_kb([[_btn("✈️ Open group", f"hub_{gid}")]]))
@@ -952,7 +952,7 @@ async def on_message(update, context):
             notes=update.message.text[m.end():].strip(),
         )
         await update.effective_message.reply_text(
-            f"📝 Saved — you paid <b>{eur(amount)}</b>. "
+            f"📝 Saved - you paid <b>{eur(amount)}</b>. "
             f"This makes future price estimates smarter. Thank you!",
             parse_mode='HTML')
 
@@ -1011,7 +1011,7 @@ async def cmd_join(update, context):
     _ensure_user(update)
     if not context.args:
         await update.effective_message.reply_text(
-            "Usage: /joingroup &lt;code&gt; — or just tap your friend's "
+            "Usage: /joingroup &lt;code&gt; - or just tap your friend's "
             "invite link.", parse_mode='HTML')
         return
     await _start_join(update, context, context.args[0])
@@ -1019,7 +1019,7 @@ async def cmd_join(update, context):
 
 async def cmd_invite(update, context):
     """Owner-only: mint an access-invite for the invite-gate.
-    (v6 let ANYONE mint codes — that bypassed the gate.)"""
+    (v6 let ANYONE mint codes - that bypassed the gate.)"""
     if not _is_owner(update):
         await update.effective_message.reply_text("⛔ Owner only.")
         return
@@ -1046,7 +1046,7 @@ async def cmd_status(update, context):
             mins = int((datetime.now() - ts).total_seconds() / 60) if ts else 0
             g = Storage().get_group(gid)
             name = g['name'] if g else gid
-            active.append(f"🔍 <b>{esc(name)}</b> — {esc(city)} ({mins}m)")
+            active.append(f"🔍 <b>{esc(name)}</b> - {esc(city)} ({mins}m)")
     await update.effective_message.reply_text(
         "\n".join(active) if active else "😴 No searches running.",
         parse_mode='HTML', reply_markup=_kb([[HOME_BTN]]))
@@ -1055,7 +1055,7 @@ async def cmd_status(update, context):
 async def cmd_stop(update, context):
     SEARCH_STOP_EVENT.set()
     await update.effective_message.reply_text(
-        "🛑 Stopping — results found so far are saved.")
+        "🛑 Stopping - results found so far are saved.")
 
 
 async def cmd_health(update, context):
@@ -1065,7 +1065,7 @@ async def cmd_health(update, context):
         ok = p.is_healthy()
         txt += f"{'✅' if ok else '❌'} {esc(p.name())}"
         if not ok:
-            txt += f" — {esc(p.get_health_reason())}"
+            txt += f" - {esc(p.get_health_reason())}"
         txt += "\n"
     txt += f"\n🤖 AI concierge: {'✅ on' if ai.available() else '➖ off (no key)'}"
     await update.effective_message.reply_text(txt, parse_mode='HTML')
@@ -1131,7 +1131,7 @@ async def scr_admin(update, context):
     s = Storage()
     st = s.admin_stats()
     top = "\n".join(
-        f"  {i + 1}. {esc(ui.city_of(d['destination']))} — {d['count']}x, "
+        f"  {i + 1}. {esc(ui.city_of(d['destination']))} - {d['count']}x, "
         f"from {eur(d['cheapest'])}"
         for i, d in enumerate(st['top_destinations']))
     text = (
@@ -1158,7 +1158,7 @@ async def _admin_users(update, context, s):
     for u in users[:20]:
         name = u['first_name'] or u['username'] or u['telegram_id']
         lines.append(
-            f"· <b>{esc(name)}</b> <code>{esc(u['telegram_id'])}</code> — "
+            f"· <b>{esc(name)}</b> <code>{esc(u['telegram_id'])}</code> - "
             f"{u['group_count']}g/{u['search_count']}s, "
             f"joined {str(u.get('created_at', '?'))[:10]}")
     if len(users) > 20:
@@ -1174,7 +1174,7 @@ async def _admin_groups(update, context, s):
         mstr = ", ".join(f"{esc(m['username'])} "
                          f"({esc(','.join(m['origins']))})"
                          for m in g['members'])
-        lines.append(f"· <b>{esc(g['name'])}</b> — {mstr} — "
+        lines.append(f"· <b>{esc(g['name'])}</b> - {mstr} - "
                      f"{g['search_count']} searches")
     if len(groups) > 15:
         lines.append(f"<i>… and {len(groups) - 15} more</i>")
@@ -1264,7 +1264,7 @@ async def on_callback(update, context):
     elif d.startswith("stop_"):
         SEARCH_STOP_EVENT.set()
         try:
-            await q.answer("Stopping — found deals are saved.", show_alert=False)
+            await q.answer("Stopping - found deals are saved.", show_alert=False)
         except Exception:
             pass
 
@@ -1311,7 +1311,7 @@ async def on_callback(update, context):
         context.user_data['await'] = {'kind': 'paid', 'rid': int(d[5:])}
         await q.message.reply_text(
             "📝 What did you actually pay all-in?\n"
-            "Send a number like <code>214.50</code> — add a note after "
+            "Send a number like <code>214.50</code> - add a note after "
             "it if you like.", parse_mode='HTML')
 
     # ── admin ──
@@ -1330,7 +1330,7 @@ async def on_callback(update, context):
 
     else:
         await q.message.reply_text(
-            "That button is from an older version — here's home:",
+            "That button is from an older version - here's home:",
             reply_markup=_kb([[HOME_BTN]]))
 
 
@@ -1358,10 +1358,10 @@ async def cmd_newsearch(update, context):
 # ═══════════════════════════════ MAIN ═══════════════════════════════
 
 async def _post_init(app):
-    """Register the '/' command menu (v6 never did — menu was empty)."""
+    """Register the '/' command menu (v6 never did - menu was empty)."""
     try:
         await app.bot.set_my_commands([
-            BotCommand("start", "Home — groups, search, results"),
+            BotCommand("start", "Home - groups, search, results"),
             BotCommand("help", "How it works"),
             BotCommand("status", "Running searches"),
             BotCommand("stop", "Stop the current search"),
@@ -1420,7 +1420,7 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    print("Flight Meetup Bot v7.0 — Starting...")
+    print("Flight Meetup Bot v7.0 - Starting...")
     while True:
         if _reachable(token):
             try:
@@ -1428,13 +1428,13 @@ if __name__ == '__main__':
                 app.run_polling()
                 break
             except Conflict:
-                print("Conflict — releasing...")
+                print("Conflict - releasing...")
                 _clear(token)
                 sleep(3)
             except KeyboardInterrupt:
                 print("\nStopped.")
                 break
         else:
-            print("Token issue — retry in 20s...")
+            print("Token issue - retry in 20s...")
             _clear(token)
             sleep(20)

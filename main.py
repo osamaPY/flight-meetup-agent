@@ -32,7 +32,7 @@ import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 
 # ---------------------------------------------------------------------------
-# v5: Shared thread pool — one pool for the entire scan, not 2,700 of them.
+# v5: Shared thread pool - one pool for the entire scan, not 2,700 of them.
 # ---------------------------------------------------------------------------
 _SHARED_POOL: ThreadPoolExecutor | None = None
 _SHARED_POOL_SIZE = 16
@@ -49,7 +49,7 @@ def _cleanup_shared_pool():
         _SHARED_POOL.shutdown(wait=False, cancel_futures=True)
         _SHARED_POOL = None
 
-# Per-provider timeout (seconds) — no provider can block longer than this.
+# Per-provider timeout (seconds) - no provider can block longer than this.
 PROVIDER_TIMEOUT = 12
 
 
@@ -81,7 +81,7 @@ def _find_new_top3(previous_top: List[Any], current_top: List[Any]) -> List[Any]
 def exact_date_pairs(window) -> List[tuple]:
     """Generate (out_date, ret_date) pairs within a DateWindow.
 
-    v5: Skip dates before today — protects against midnight rollover
+    v5: Skip dates before today - protects against midnight rollover
     during long scans querying yesterday's flights.
     """
     pairs = []
@@ -109,7 +109,7 @@ def get_best_flight(
     """Query ALL healthy providers in parallel. Collect every result. Return the CHEAPEST.
 
     This replaces the old greedy 3-tier waterfall. The old approach took the first
-    provider that responded — even if a slower provider had a 50% cheaper fare.
+    provider that responded - even if a slower provider had a 50% cheaper fare.
 
     Now we:
       1. Fire every healthy provider simultaneously (one ThreadPoolExecutor)
@@ -140,10 +140,10 @@ def get_best_flight(
             return cached
 
         try:
-            # Metered (paid) providers gate themselves on budget — skip when spent.
+            # Metered (paid) providers gate themselves on budget - skip when spent.
             # (Was a hardcoded `if p.name() == "Duffel"` check; now capability-driven.)
             if not p.pre_call_ok():
-                log_info(f"[{p.name()}] SKIP — budget exhausted")
+                log_info(f"[{p.name()}] SKIP - budget exhausted")
                 return None
 
             # Providers that expose one-way legs feed the leg combiner (Layer 2).
@@ -324,7 +324,7 @@ def verify_mode(storage: Storage, notifier: Notifier, providers: List[FlightProv
             log_error(f"Failed for {dest_iata}")
 
 def print_results_table(results: list, title: str, limit: int = 20) -> None:
-    """v6: Render results table — handles both 2-person and N-person results."""
+    """v6: Render results table - handles both 2-person and N-person results."""
     print(f"\n{'='*60}")
     print(f" [ TOP {title.upper()} ] ")
     print(f"{'='*60}")
@@ -441,7 +441,7 @@ def booking_mode(
     progress_callback=None,
     search_request=None,  # v6: SearchRequest from src.core.search_request
 ) -> SearchRunSummary:
-    """v6: Parameterized meetup search — any group size (2-4), any origins, any dates.
+    """v6: Parameterized meetup search - any group size (2-4), any origins, any dates.
 
     When search_request is None, falls back to the legacy Milan+Riga summer holiday
     search for backward compatibility.
@@ -766,7 +766,7 @@ def show_latest_results(storage: Storage) -> None:
     print_results_table(results, "Latest Best Deals", limit=15)
 
 def discover_mode(providers: List[FlightProvider]) -> None:
-    """Discovery — scan Ryanair routes to find new Schengen connections."""
+    """Discovery - scan Ryanair routes to find new Schengen connections."""
     print("\n--- Running DISCOVER Mode ---")
     from src.core.airports import CANDIDATE_DESTINATIONS, SCHENGEN_COUNTRIES
     from src.clients.ryanair_client import RyanairClient

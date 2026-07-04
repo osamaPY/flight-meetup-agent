@@ -22,7 +22,7 @@ class RyanairClient:
         }
         self.ttl = 3600 * 2  # 2 hours
         self.debug = debug
-        # v5: Connection pooling — reuse TCP connections for 20-50% latency reduction
+        # v5: Connection pooling - reuse TCP connections for 20-50% latency reduction
         self._session = requests.Session()
         self._session.headers.update(self.headers)
         self._load_disk_cache()
@@ -166,7 +166,7 @@ class RyanairClient:
         self, origin: str, destination: str,
         date_from: str, date_to: str,
     ) -> List[Flight]:
-        """Ryanair cheapest-per-day calendar — one call per route-month.
+        """Ryanair cheapest-per-day calendar - one call per route-month.
 
         Returns one Flight per date with the cheapest fare.
         Foundation of the nightly price surface.

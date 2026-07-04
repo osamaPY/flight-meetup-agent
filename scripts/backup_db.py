@@ -1,6 +1,6 @@
-"""v5: Daily DB backup — copies flights.db to a timestamped backup.
+"""v5: Daily DB backup - copies flights.db to a timestamped backup.
 
-The price_history table is the most valuable asset in the project —
+The price_history table is the most valuable asset in the project -
 it powers L1 calendar pre-scan, L5 smart ordering, deal percentiles,
 and trend analysis. It is irreplaceable. Back it up.
 

@@ -16,7 +16,7 @@ class DateWindow:
 class Config:
     # ── v6: no more hardcoded origins ──
     # Origins are now per-search via SearchRequest (src/core/search_request.py).
-    # These remain as CONVENIENCE DEFAULTS only — used when no SearchRequest is provided
+    # These remain as CONVENIENCE DEFAULTS only - used when no SearchRequest is provided
     # (CLI menu, backward compat, scripts).
     DEFAULT_ORIGINS_A = ["BGY", "MXP", "LIN"]
     DEFAULT_ORIGINS_B = ["RIX"]
@@ -75,7 +75,7 @@ class Config:
     ) -> List[DateWindow]:
         """Generate 1-week DateWindow chunks for any date range.
 
-        v6: Fully parameterized — no hardcoded dates.
+        v6: Fully parameterized - no hardcoded dates.
         """
         windows = []
         start_dt = datetime.strptime(start, "%Y-%m-%d")
@@ -98,7 +98,7 @@ class Config:
 
     @staticmethod
     def generate_holiday_windows() -> List[DateWindow]:
-        """Backward-compatible: the original Jul 15 – Aug 12, 2026 holiday windows."""
+        """Backward-compatible: the original Jul 15 - Aug 12, 2026 holiday windows."""
         return Config.generate_date_windows(
             start="2026-07-15",
             end="2026-08-12",
@@ -109,7 +109,7 @@ class Config:
 # Backward-compatible module-level constant (used by scripts that haven't been updated yet)
 DATE_WINDOWS = Config.generate_holiday_windows()
 
-# Deprecated aliases — kept for scripts that still reference them.
+# Deprecated aliases - kept for scripts that still reference them.
 # New code should use SearchRequest from src.core.search_request.
 ORIGINS_A = Config.DEFAULT_ORIGINS_A
 ORIGINS_B = Config.DEFAULT_ORIGINS_B

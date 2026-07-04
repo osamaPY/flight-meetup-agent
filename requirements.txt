@@ -5,7 +5,7 @@ python-dotenv
 # Telegram bot
 python-telegram-bot
 
-# Flight data (free provider — Google Flights via Protobuf)
+# Flight data (free provider - Google Flights via Protobuf)
 fast-flights==3.0.2
 
 # Local API server

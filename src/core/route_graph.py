@@ -1,4 +1,4 @@
-"""Ryanair route graph — which routes actually exist.
+"""Ryanair route graph - which routes actually exist.
 
 Open endpoint (probed 2026-07-05, HTTP 200 JSON, no key needed):
 
@@ -7,7 +7,7 @@ Open endpoint (probed 2026-07-05, HTTP 200 JSON, no key needed):
 Purpose: PRUNE wasted provider calls. `RyanairProvider` and
 `RyanairCalendarProvider` skip HTTP instantly when the graph proves Ryanair
 does not fly origin->dest. Google-based providers still cover those routes, so
-pruning costs zero coverage — it only removes guaranteed-empty calls.
+pruning costs zero coverage - it only removes guaranteed-empty calls.
 
 Semantics are deliberately three-valued and FAIL-OPEN:
 
@@ -15,7 +15,7 @@ Semantics are deliberately three-valued and FAIL-OPEN:
                    False   graph fetched, route provably absent  (safe to prune)
                    None    graph unavailable                     (never prune)
 
-Cache: data/route_graph.json — 7-day TTL per origin, thread-safe, with a
+Cache: data/route_graph.json - 7-day TTL per origin, thread-safe, with a
 short negative-TTL so a failing endpoint is not hammered inside one run.
 """
 
@@ -114,7 +114,7 @@ class RouteGraph:
             if entry and (now - entry.get("fetched_at", 0)) < CACHE_TTL:
                 return set(entry.get("destinations", []))
             if (now - self._failures.get(origin, 0)) < FAILURE_TTL:
-                return None  # recently failed — don't hammer
+                return None  # recently failed - don't hammer
 
         # Fetch outside the lock (a racing duplicate fetch is harmless).
         dests = self._fetch(origin)
@@ -142,7 +142,7 @@ class RouteGraph:
 
 
 # ---------------------------------------------------------------------------
-# Module-level singleton — providers share one graph (and one disk cache)
+# Module-level singleton - providers share one graph (and one disk cache)
 # ---------------------------------------------------------------------------
 
 _GRAPH: Optional[RouteGraph] = None

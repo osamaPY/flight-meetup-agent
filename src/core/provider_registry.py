@@ -1,9 +1,9 @@
-"""Capability-tagged provider registry — the single source of truth for which
+"""Capability-tagged provider registry - the single source of truth for which
 flight providers exist, what each is good at, and which search tier it serves.
 
 This is the keystone refactor. It lets us:
 
-  * add a new airline / reader by registering ONE spec — no edits to the search
+  * add a new airline / reader by registering ONE spec - no edits to the search
     engine, no hardcoded provider-name strings sprinkled through main.py;
   * route work by *capability* ("who has a calendar?", "who is bookable?")
     instead of by provider name;
@@ -11,10 +11,10 @@ This is the keystone refactor. It lets us:
 
 Tiers
 -----
-DISCOVERY    — broad, cheap, allowed to be slightly stale. Answers
+DISCOVERY    - broad, cheap, allowed to be slightly stale. Answers
                "which cities/dates are worth looking at?" across a huge space.
                Calendar endpoints, aggregators, history.
-VERIFICATION — narrow, live, must be bookable. Answers "is THIS specific deal
+VERIFICATION - narrow, live, must be bookable. Answers "is THIS specific deal
                real right now?" Runs only on the shortlist discovery surfaced.
 
 A provider may serve one tier or both. `build_providers(tier=...)` filters by
@@ -22,7 +22,7 @@ tier, so the current exact-date search keeps getting exactly today's providers
 (tier=VERIFICATION), while a future calendar-first discovery pipeline can ask
 for `build_discovery_providers()` without touching any caller.
 
-NOTE: this module must not import `providers` at module top — provider classes
+NOTE: this module must not import `providers` at module top - provider classes
 import `ProviderCapabilities` from here, so the concrete classes are imported
 lazily inside `_build_registry()` to avoid a circular import.
 """
@@ -145,12 +145,12 @@ def get_registry() -> List[ProviderSpec]:
 
 
 def all_capabilities() -> List[ProviderCapabilities]:
-    """Introspection helper — every registered provider's capability tags."""
+    """Introspection helper - every registered provider's capability tags."""
     return [spec.capabilities for spec in get_registry()]
 
 
 # ---------------------------------------------------------------------------
-# Build helpers — the one place providers get instantiated
+# Build helpers - the one place providers get instantiated
 # ---------------------------------------------------------------------------
 
 def build_providers(
@@ -195,7 +195,7 @@ def build_verification_providers(include_paid: bool = True) -> List["object"]:
 def build_discovery_providers() -> List["object"]:
     """Broad, cheap, calendar-capable providers for shortlist discovery.
 
-    Paid providers are always excluded from discovery — broad scans must stay
+    Paid providers are always excluded from discovery - broad scans must stay
     free. Ready for a calendar-first discovery pipeline; no caller is forced to
     adopt it.
     """

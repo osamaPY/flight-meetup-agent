@@ -1,4 +1,4 @@
-"""Provider health test — verifies all 4 active providers."""
+"""Provider health test - verifies all 4 active providers."""
 
 import sys
 import os

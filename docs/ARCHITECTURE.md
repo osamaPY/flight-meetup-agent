@@ -109,13 +109,13 @@ Active provider classes:
 `telegram_bot.py` (v7) is the main UX. Pure rendering helpers live in
 `src/core/bot_ui.py` and are offline-tested in `tests/test_bot_ui.py`.
 
-v7 design — "one card that navigates like an app":
+v7 design - "one card that navigates like an app":
 
 - The UI is a single message per chat; every tap edits it in place
   (no message spam). Screens: Home → Group Hub → Search Panel →
   Progress → Results → City Detail, with Back everywhere.
 - Search setup is a settings panel with smart defaults (next month,
-  2–4 nights, 10kg, transfers, any flights, Europe) — launch is 1 tap;
+  2-4 nights, 10kg, transfers, any flights, Europe) - launch is 1 tap;
   tap any row to change it. The old 6-step linear wizard is gone.
 - Airport entry accepts city names ("milan" → BGY/MXP/LIN picker) as
   well as IATA codes, via `bot_ui.resolve_airports()`.

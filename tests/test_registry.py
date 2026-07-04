@@ -1,5 +1,5 @@
 """Offline tests for the provider registry, route-graph pruning, and the
-calendar discovery pre-scan. No HTTP — everything network-shaped is faked.
+calendar discovery pre-scan. No HTTP - everything network-shaped is faked.
 
 Run:  python -m pytest tests/test_registry.py -q
 """
@@ -74,7 +74,7 @@ def test_all_instantiated_providers_expose_capability_hooks():
 # ---------------------------------------------------------------------------
 
 class _FakeGraph(RouteGraph):
-    """RouteGraph with a canned _fetch — no HTTP, temp cache file."""
+    """RouteGraph with a canned _fetch - no HTTP, temp cache file."""
 
     def __init__(self, cache_file, responses):
         self._responses = responses            # origin -> list[str] | None

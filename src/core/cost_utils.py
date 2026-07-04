@@ -1,5 +1,5 @@
 """
-Cost normalization utilities — makes flight prices honest by adding:
+Cost normalization utilities - makes flight prices honest by adding:
   - Airport-to-city-center transfer costs
   - 10 kg carry-on luggage costs for LCCs
   - Sanity-band validation
@@ -12,7 +12,7 @@ sure rankings reflect the TRUE cost, not the advertised base fare.
 from typing import Dict, Optional, Tuple
 
 # ---------------------------------------------------------------------------
-# TRANSFER COSTS — airport → city center round-trip per person (EUR)
+# TRANSFER COSTS - airport → city center round-trip per person (EUR)
 # Sources: airport official sites, Rome2Rio, verified 2026-07
 # ---------------------------------------------------------------------------
 TRANSFER_COST: Dict[str, Tuple[float, str]] = {
@@ -84,7 +84,7 @@ def get_transfer_cost(iata: str) -> Tuple[float, str]:
 
 
 # ---------------------------------------------------------------------------
-# 10 KG CARRY-ON LUGGAGE COST — per-person round-trip
+# 10 KG CARRY-ON LUGGAGE COST - per-person round-trip
 # LCCs: pay extra. Full-service: included in base fare.
 # Prices verified July 2026 from airline websites.
 # ---------------------------------------------------------------------------
@@ -116,11 +116,11 @@ def get_bag_cost(airline_iata: str) -> Tuple[float, bool, str]:
     if info:
         return (info[0], False, info[1])
     # Unknown airline → conservative estimate (most LCCs charge for 10 kg)
-    return (24.0, False, "10 kg carry-on — estimated")
+    return (24.0, False, "10 kg carry-on - estimated")
 
 
 # ---------------------------------------------------------------------------
-# SANITY BAND — reject or flag quotes far outside historical range
+# SANITY BAND - reject or flag quotes far outside historical range
 # ---------------------------------------------------------------------------
 def is_sane_price(price: float, destination: str, storage=None) -> Tuple[bool, str]:
     """Check if a quote is in a reasonable band for this route.
@@ -162,7 +162,7 @@ def is_sane_price(price: float, destination: str, storage=None) -> Tuple[bool, s
 
 
 # ---------------------------------------------------------------------------
-# CONSENSUS DEDUP — same airline + price within EUR 1 = same source
+# CONSENSUS DEDUP - same airline + price within EUR 1 = same source
 # ---------------------------------------------------------------------------
 def dedupe_quotes(quotes: list) -> list:
     """Collapse quotes that are the same airline + same price within EUR 1.

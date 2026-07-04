@@ -1,4 +1,4 @@
-"""Search request model — fully parameterized, no hardcoded origins or dates.
+"""Search request model - fully parameterized, no hardcoded origins or dates.
 
 Replaces the old Config.ORIGINS_A / ORIGINS_B / generate_holiday_windows()
 with a user-supplied dataclass so any group of 2-4 people can search from
@@ -70,7 +70,7 @@ class SearchRequest:
 
     @property
     def schengen_only(self) -> bool:
-        """Backward compat — True if destination_universe is schengen."""
+        """Backward compat - True if destination_universe is schengen."""
         return self.destination_universe == "schengen"
 
     @property
@@ -97,7 +97,7 @@ class SearchRequest:
 
     @property
     def home_iatas(self) -> List[str]:
-        """Every IATA that is a participant's primary origin — excluded from destinations."""
+        """Every IATA that is a participant's primary origin - excluded from destinations."""
         return self.all_origins
 
     def date_windows(self) -> list:

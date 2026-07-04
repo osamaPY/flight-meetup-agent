@@ -11,19 +11,19 @@ It started as a two-person "where do we meet, Milan or Riga?" script and grew in
 
 ## How it works
 
-Make a group in the bot and share the invite link. People join and say which airports they can fly from — you can type "milan" or "riga", the codes aren't required. Hit search, and it goes through destinations across Europe, finds each person's cheapest realistic round trip, adds the bag fee for that airline and the airport-to-city transfer, and sends back a ranked list of cities with the cost broken down per person. Everyone in the group gets a message when it's finished, not just whoever started it.
+Make a group in the bot and share the invite link. People join and say which airports they can fly from - you can type "milan" or "riga", the codes aren't required. Hit search, and it goes through destinations across Europe, finds each person's cheapest realistic round trip, adds the bag fee for that airline and the airport-to-city transfer, and sends back a ranked list of cities with the cost broken down per person. Everyone in the group gets a message when it's finished, not just whoever started it.
 
 There's also an AI button (DeepSeek): it reads the actual results and tells you which city to go for and why, and can suggest a few things to do in the one you're leaning towards.
 
 Roughly what a result looks like in chat:
 
 ```
-Best meetups — Weekend Crew
+Best meetups - Weekend Crew
 3 cities · all-in per group · tap a city for details
 
-1. 🇦🇹 Vienna — €142 · 3n · confirmed
-2. 🇭🇺 Budapest — €158 · 3n · one source
-3. 🇵🇹 Porto — €171 · 3n · confirmed
+1. 🇦🇹 Vienna - €142 · 3n · confirmed
+2. 🇭🇺 Budapest - €158 · 3n · one source
+3. 🇵🇹 Porto - €171 · 3n · confirmed
 
         [ Which should we pick? ]
 ```
@@ -56,17 +56,17 @@ A few decisions worth explaining:
 
 **Searching is split in two.** Scanning the whole map cheaply and confirming one specific deal are different jobs, so they use different sources. Discovery pulls Ryanair's month-at-a-time calendar (one request covers ~31 days of fares) to decide which cities are even worth looking at; verification then checks the shortlist live. It's a lot fewer calls than pricing every date individually.
 
-**Providers are registered, not hardcoded.** Each one declares what it can do — which airline, free or paid, has a calendar, can be booked, which tier it belongs to — and the search engine picks by those tags instead of checking provider names in `if` statements. Adding a source is one entry in `provider_registry.py`.
+**Providers are registered, not hardcoded.** Each one declares what it can do - which airline, free or paid, has a calendar, can be booked, which tier it belongs to - and the search engine picks by those tags instead of checking provider names in `if` statements. Adding a source is one entry in `provider_registry.py`.
 
 **It skips routes that don't exist.** Ryanair publishes its route map, so before firing a request for, say, Bergamo→New York, it checks the cached graph and skips it instantly. If the graph is unavailable it just doesn't skip anything, so it can never hide a route that's actually there.
 
 **The price is meant to be honest.** Bag fees are per-airline, airport transfers are included, and when only one source has a fare it says so rather than pretending it's confirmed. There's a verify step to re-check a deal live before you book, because a confidently wrong price is worse than no price.
 
-**The AI is kept on a short leash.** The recommendation is given only the numbers already computed and told not to invent fares — it's choosing between real options, not making up prices. Every AI call is optional and fails quietly, so the bot never breaks if DeepSeek is down or no key is set.
+**The AI is kept on a short leash.** The recommendation is given only the numbers already computed and told not to invent fares - it's choosing between real options, not making up prices. Every AI call is optional and fails quietly, so the bot never breaks if DeepSeek is down or no key is set.
 
 There are 42 tests that run offline (no network, no API key) covering the registry, the route-graph fallback behaviour, the discovery scan, the bot's rendering helpers, and the AI prompt-building with a mocked client.
 
-For more detail there are notes in [docs/](docs/) — [architecture](docs/ARCHITECTURE.md), [providers](docs/PROVIDERS.md), [search layers](docs/SMART_LAYERS.md), and a [codebase tour](docs/CODEBASE_GUIDE.md).
+For more detail there are notes in [docs/](docs/) - [architecture](docs/ARCHITECTURE.md), [providers](docs/PROVIDERS.md), [search layers](docs/SMART_LAYERS.md), and a [codebase tour](docs/CODEBASE_GUIDE.md).
 
 ## Layout
 
@@ -83,7 +83,7 @@ docs/                      architecture and guides
 
 ## A few honest caveats
 
-It only covers European destinations for now. It reads public and consenting endpoints — Ryanair's open API, Google Flights via `fast-flights`, optionally Duffel — and deliberately doesn't scrape the airlines that wall themselves off, so most non-Ryanair fares come through Google rather than a direct source. Prices move constantly, so always confirm on the airline's own checkout before booking. It's a personal project, not affiliated with any airline.
+It only covers European destinations for now. It reads public and consenting endpoints - Ryanair's open API, Google Flights via `fast-flights`, optionally Duffel - and deliberately doesn't scrape the airlines that wall themselves off, so most non-Ryanair fares come through Google rather than a direct source. Prices move constantly, so always confirm on the airline's own checkout before booking. It's a personal project, not affiliated with any airline.
 
 ## License
 

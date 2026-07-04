@@ -1,10 +1,10 @@
 """
-Multi-mode Google Flights scraper — queries the free fast-flights backend
+Multi-mode Google Flights scraper - queries the free fast-flights backend
 in 3 different modes to maximize price discovery:
 
-  Mode 1 — DIRECT: Non-stop flights only (cheapest, fastest)
-  Mode 2 — ALL: Direct + connections (widest coverage)
-  Mode 3 — CALENDAR: Month-level scan for cheapest dates
+  Mode 1 - DIRECT: Non-stop flights only (cheapest, fastest)
+  Mode 2 - ALL: Direct + connections (widest coverage)
+  Mode 3 - CALENDAR: Month-level scan for cheapest dates
 
 Combined, these 3 modes surface more deals than a single search while
 using the same free Google Flights Protobuf endpoint.
@@ -30,7 +30,7 @@ class MultiModeGoogleScraper(BaseScraper):
     def name(self) -> str:
         return "Google Multi-Mode"
 
-    # Required by BaseScraper ABC — runs all modes, returns merged results
+    # Required by BaseScraper ABC - runs all modes, returns merged results
     def _search_one_way(
         self, origin: str, destination: str, date: str
     ) -> List[Flight]:

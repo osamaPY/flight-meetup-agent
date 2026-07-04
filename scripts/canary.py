@@ -35,22 +35,22 @@ def run_canary():
     results = []
     for p in providers:
         if not p.is_healthy():
-            results.append(f"  [SKIP] {p.name()} — not healthy")
+            results.append(f"  [SKIP] {p.name()} - not healthy")
             continue
 
         try:
             rt = p.search_round_trip("BGY", "VIE", TARGET_DATE, TARGET_DATE,
                                      RET_DATE, RET_DATE)
             if not rt or rt.price <= 0:
-                results.append(f"  [FAIL] {p.name()} — no result for BGY→VIE")
+                results.append(f"  [FAIL] {p.name()} - no result for BGY→VIE")
             else:
                 sane, reason = is_sane_price(rt.price, "VIE", storage)
                 status = "OK" if sane else "WARN"
                 results.append(
-                    f"  [{status}] {p.name()} — EUR {rt.price:.0f} ({reason})"
+                    f"  [{status}] {p.name()} - EUR {rt.price:.0f} ({reason})"
                 )
         except Exception as e:
-            results.append(f"  [FAIL] {p.name()} — {e}")
+            results.append(f"  [FAIL] {p.name()} - {e}")
 
     all_ok = all("FAIL" not in r for r in results)
     summary = (

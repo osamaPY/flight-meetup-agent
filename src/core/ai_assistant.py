@@ -1,21 +1,21 @@
-"""AI travel concierge — turns cold result data into a warm, human answer.
+"""AI travel concierge - turns cold result data into a warm, human answer.
 
 Two features, both powered by DeepSeek (src/clients/deepseek_client.py) and
 both strictly optional (they return None if the LLM is unavailable so the bot
 degrades gracefully):
 
-  recommend_meetup(deals)  → "Which city should we pick?" — reasons over the
+  recommend_meetup(deals)  → "Which city should we pick?" - reasons over the
                              ACTUAL computed deals and recommends one, with a
                              one-line why. Hard-constrained to the given numbers
                              so it can never invent a price.
 
-  city_vibe(city, nights)  → "What could we do there?" — a short, upbeat trip
+  city_vibe(city, nights)  → "What could we do there?" - a short, upbeat trip
                              idea for the destination and trip length. General
                              travel knowledge, clearly labelled as an AI idea.
 
 Design choices that matter for a pricing product:
   * The recommender is fed a compact, factual digest of the real deals and told
-    to use ONLY those figures — no fabricated fares, flights, or dates.
+    to use ONLY those figures - no fabricated fares, flights, or dates.
   * Results are cached in-process by prompt so repeated taps don't re-bill.
   * Everything is best-effort; callers treat None as "AI not available".
 """
@@ -102,7 +102,7 @@ def recommend_meetup(deals: List[dict], group_name: str = "",
         "similarly), and a price-confidence label. "
         "Recommend ONE option and briefly say why (cost, fairness, and a touch "
         "of destination appeal). You MAY mention a strong runner-up in one line. "
-        "STRICT RULES: use ONLY the numbers provided — never invent prices, "
+        "STRICT RULES: use ONLY the numbers provided - never invent prices, "
         "flights, airlines, or dates. Keep it under 90 words. No markdown "
         "headers. Warm and human, like texting a friend."
     )

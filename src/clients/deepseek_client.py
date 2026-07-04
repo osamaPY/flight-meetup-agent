@@ -1,9 +1,9 @@
-"""DeepSeek LLM client — thin, dependency-free wrapper over DeepSeek's
+"""DeepSeek LLM client - thin, dependency-free wrapper over DeepSeek's
 OpenAI-compatible Chat Completions API.
 
 Uses `requests` (already a dependency) rather than the OpenAI SDK to keep the
 footprint small. Every call fails soft: on missing key, timeout, or bad
-response it returns None so the caller can degrade gracefully — the bot must
+response it returns None so the caller can degrade gracefully - the bot must
 never break because an optional AI feature is unavailable.
 
 Docs: https://api-docs.deepseek.com  (base https://api.deepseek.com, model

@@ -1,5 +1,5 @@
 """
-Unified Scraper Engine — orchestrates all direct airline scrapers in
+Unified Scraper Engine - orchestrates all direct airline scrapers in
 parallel, aggregates results, and provides a single entry point for
 one-way, round-trip, and matrix searches.
 
@@ -215,7 +215,7 @@ class ScraperEngine:
 
 
 # ------------------------------------------------------------------
-# Module-level convenience — engine that mirrors the CLI/API lifecycle
+# Module-level convenience - engine that mirrors the CLI/API lifecycle
 # ------------------------------------------------------------------
 
 _shared_engine: Optional[ScraperEngine] = None

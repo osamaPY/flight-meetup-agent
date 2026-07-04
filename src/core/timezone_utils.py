@@ -16,9 +16,9 @@ from typing import Optional, Dict, Tuple
 
 # Timezone offset map for common European airports (hours from UTC).
 # Positive = ahead of UTC (EET = +2, CET = +1).
-# This is a stopgap — the full OurAirports dataset has timezone per airport.
+# This is a stopgap - the full OurAirports dataset has timezone per airport.
 AIRPORT_UTC_OFFSET: Dict[str, float] = {
-    # UK (UTC+0 winter, +1 summer — using summer DST)
+    # UK (UTC+0 winter, +1 summer - using summer DST)
     "LHR": 1.0, "LGW": 1.0, "STN": 1.0, "LTN": 1.0, "LCY": 1.0,
     "MAN": 1.0, "EDI": 1.0, "BHX": 1.0, "BRS": 1.0, "GLA": 1.0,
 
@@ -133,6 +133,6 @@ def compute_arrival_spread(arrivals: list) -> Tuple[float, str]:
 
     warning = ""
     if len(offsets_seen) > 1:
-        warning = f"⏰ {len(offsets_seen)} timezones — times shown in local, gap is UTC-corrected"
+        warning = f"⏰ {len(offsets_seen)} timezones - times shown in local, gap is UTC-corrected"
 
     return (round(spread, 2), warning)

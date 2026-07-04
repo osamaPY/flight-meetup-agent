@@ -11,15 +11,15 @@ Base class (FlightProvider) handles:
   - pre_call_ok()/record_call() hooks for metered (paid) providers
 
 Providers (registered in provider_registry.py):
-  Ryanair            — official API, free, live, VERIFICATION+DISCOVERY
-  GoogleScraper      — fast-flights Protobuf, free, all airlines, both tiers
-  Google Multi-Mode  — 3 search modes, free, wider coverage, both tiers
-  Ryanair Calendar   — open cheapestPerDay surface, free, DISCOVERY only
-  Duffel             — GDS, paid/bookable, VERIFICATION only (budget-gated)
+  Ryanair            - official API, free, live, VERIFICATION+DISCOVERY
+  GoogleScraper      - fast-flights Protobuf, free, all airlines, both tiers
+  Google Multi-Mode  - 3 search modes, free, wider coverage, both tiers
+  Ryanair Calendar   - open cheapestPerDay surface, free, DISCOVERY only
+  Duffel             - GDS, paid/bookable, VERIFICATION only (budget-gated)
 
 Endpoint reality (probed 2026-07): Ryanair's public API is open (calendar,
 route graph, airports). Wizz / easyJet / Vueling / Transavia / Kiwi are walled
-(403 / Access Denied / deprecated) — their fares reach us via the Google
+(403 / Access Denied / deprecated) - their fares reach us via the Google
 aggregator, not via direct readers. Add a new source by registering one spec.
 """
 
@@ -92,7 +92,7 @@ class FlightProvider(ABC):
     # -- override for live health --
 
     def _live_health_check(self) -> bool:
-        """Override — actual HTTP health endpoint call. Called every 15 min."""
+        """Override - actual HTTP health endpoint call. Called every 15 min."""
         return True
 
     # -- optional override --
@@ -163,7 +163,7 @@ class FlightProvider(ABC):
 
 
 # ---------------------------------------------------------------------------
-# 1. Ryanair — official public API
+# 1. Ryanair - official public API
 # ---------------------------------------------------------------------------
 
 class RyanairProvider(FlightProvider):
@@ -177,7 +177,7 @@ class RyanairProvider(FlightProvider):
         bookable=False,          # deep-link handoff, not a bookable offer we hold
         has_round_trip=True,
         has_one_way=True,
-        has_calendar=True,       # cheapestPerDay — open, confirmed 2026-07
+        has_calendar=True,       # cheapestPerDay - open, confirmed 2026-07
         tiers=frozenset({DISCOVERY, VERIFICATION}),
     )
 
@@ -200,7 +200,7 @@ class RyanairProvider(FlightProvider):
 
     def search_round_trip(self, origin, dest, out_from, out_to, in_from, in_to):
         if self._route_pruned(origin, dest):
-            return None  # route provably absent — skip the HTTP entirely
+            return None  # route provably absent - skip the HTTP entirely
         try:
             return self._retry_search(
                 self.client.round_trip_fare,
@@ -234,14 +234,14 @@ class RyanairProvider(FlightProvider):
 
 
 # ---------------------------------------------------------------------------
-# 2. GoogleScraper — fast-flights Protobuf
+# 2. GoogleScraper - fast-flights Protobuf
 # ---------------------------------------------------------------------------
 
 class GoogleScraperProvider(FlightProvider):
     CAPABILITIES = ProviderCapabilities(
         key="google",
         label="Internal Google Scraper",
-        airline=None,            # aggregator — every airline's prices
+        airline=None,            # aggregator - every airline's prices
         region="GLOBAL",
         cost="free",
         freshness="live",
@@ -276,22 +276,22 @@ class GoogleScraperProvider(FlightProvider):
             return []
 
     def _live_health_check(self) -> bool:
-        return True  # No API key — always available
+        return True  # No API key - always available
 
 
 # ---------------------------------------------------------------------------
-# 3. Duffel — GDS
+# 3. Duffel - GDS
 # ---------------------------------------------------------------------------
 
 class DuffelProvider(FlightProvider):
     CAPABILITIES = ProviderCapabilities(
         key="duffel",
         label="Duffel",
-        airline=None,            # GDS — multi-airline
+        airline=None,            # GDS - multi-airline
         region="GLOBAL",
-        cost="paid",             # metered — budget-gated
+        cost="paid",             # metered - budget-gated
         freshness="live",
-        bookable=True,           # real GDS offers — the verification voice
+        bookable=True,           # real GDS offers - the verification voice
         has_round_trip=True,
         has_one_way=False,
         has_calendar=False,
@@ -343,7 +343,7 @@ class DuffelProvider(FlightProvider):
 
 
 # ---------------------------------------------------------------------------
-# 4. Google Multi-Mode — same Protobuf, 3 search modes
+# 4. Google Multi-Mode - same Protobuf, 3 search modes
 # ---------------------------------------------------------------------------
 
 class MultiGoogleScraperProvider(FlightProvider):
@@ -390,7 +390,7 @@ class MultiGoogleScraperProvider(FlightProvider):
 
 
 # ---------------------------------------------------------------------------
-# 5. Ryanair Calendar — DISCOVERY tier
+# 5. Ryanair Calendar - DISCOVERY tier
 # ---------------------------------------------------------------------------
 
 class RyanairCalendarProvider(FlightProvider):
@@ -402,7 +402,7 @@ class RyanairCalendarProvider(FlightProvider):
 
     Results are approximate (cheapest outbound day + cheapest return day within
     the window, not a confirmed paired itinerary), so this provider is tagged
-    DISCOVERY only — it never feeds the exact-date verification search, and its
+    DISCOVERY only - it never feeds the exact-date verification search, and its
     Flights carry `is_approximate=True`. Verify before booking.
     """
 
@@ -430,7 +430,7 @@ class RyanairCalendarProvider(FlightProvider):
     def search_one_way(self, origin, dest, date):
         """Cheapest fares per day across the month containing `date`."""
         if RyanairProvider._route_pruned(origin, dest):
-            return []  # route provably absent — skip the HTTP entirely
+            return []  # route provably absent - skip the HTTP entirely
         try:
             from datetime import datetime, timedelta
             start = datetime.strptime(date, "%Y-%m-%d")
@@ -466,7 +466,7 @@ class RyanairCalendarProvider(FlightProvider):
                 source="ryanair_calendar",
                 airline="FR",
                 currency="EUR",
-                is_approximate=True,       # discovery-grade — verify before booking
+                is_approximate=True,       # discovery-grade - verify before booking
                 cabin_bag_included=False,
                 deep_link=getattr(best_out, "deep_link", ""),
             )

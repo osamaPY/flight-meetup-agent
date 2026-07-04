@@ -52,7 +52,7 @@ class Notifier:
         for i, res in enumerate(results[:10]):
             n = getattr(res, 'nights', 0)
             nights_suffix = f" | {n}n" if n > 0 else ""
-            text += f"{i+1}. **{res.dest_city}** — €{res.total_price:.2f}{nights_suffix}\n"
+            text += f"{i+1}. **{res.dest_city}** - €{res.total_price:.2f}{nights_suffix}\n"
             text += f"   {res.outbound_date} | {res.source}\n\n"
         
         return text

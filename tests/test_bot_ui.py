@@ -1,6 +1,6 @@
 """Offline tests for the v7 bot UI helpers (src/core/bot_ui.py).
 
-Pure string/data tests — no telegram, no network, no DB.
+Pure string/data tests - no telegram, no network, no DB.
 Run:  python -m pytest tests/test_bot_ui.py -q
 """
 
@@ -54,7 +54,7 @@ def test_resolve_mixed_input():
     resolved, sugg, unknown = ui.resolve_airports("Milan, RIX, xyzzy, QQQ")
     assert resolved == ["RIX"]
     assert "Milan" in sugg
-    assert "QQQ" in unknown          # plausible IATA outside DB — passthrough
+    assert "QQQ" in unknown          # plausible IATA outside DB - passthrough
     assert "xyzzy" in unknown
 
 
@@ -119,7 +119,7 @@ def test_settings_panel_renders_all_settings():
 
 def test_nights_label_fixed_vs_range():
     assert ui.nights_label({"min_n": 3, "max_n": 3}) == "3 nights"
-    assert ui.nights_label({"min_n": 2, "max_n": 4}) == "2–4 nights"
+    assert ui.nights_label({"min_n": 2, "max_n": 4}) == "2-4 nights"
 
 
 # ---------------------------------------------------------------------------

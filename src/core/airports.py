@@ -29,7 +29,7 @@ EUROPE_COUNTRIES = SCHENGEN_COUNTRIES | {
 }
 
 # ═════════════════════════════════════════════════════════════════════════
-# ALL EUROPEAN AIRPORTS — Schengen + non-Schengen
+# ALL EUROPEAN AIRPORTS - Schengen + non-Schengen
 # 160+ airports across 40+ countries. No hardcoded exclusions.
 # ═════════════════════════════════════════════════════════════════════════
 
@@ -45,8 +45,8 @@ CANDIDATE_DESTINATIONS = [
     Airport("PRG", "Prague Václav Havel", "Prague", "Czech Republic", "🇨🇿", 50.10, 14.26),
     Airport("WAW", "Warsaw Chopin", "Warsaw", "Poland", "🇵🇱", 52.17, 20.97),
     Airport("CPH", "Copenhagen", "Copenhagen", "Denmark", "🇩🇰", 55.62, 12.65),
-    Airport("BCN", "Barcelona–El Prat", "Barcelona", "Spain", "🇪🇸", 41.30, 2.08),
-    Airport("MAD", "Madrid–Barajas", "Madrid", "Spain", "🇪🇸", 40.49, -3.57),
+    Airport("BCN", "Barcelona-El Prat", "Barcelona", "Spain", "🇪🇸", 41.30, 2.08),
+    Airport("MAD", "Madrid-Barajas", "Madrid", "Spain", "🇪🇸", 40.49, -3.57),
     Airport("FRA", "Frankfurt", "Frankfurt", "Germany", "🇩🇪", 50.03, 8.57),
     Airport("BVA", "Paris Beauvais", "Paris", "France", "🇫🇷", 49.45, 2.11),
     Airport("ORY", "Paris Orly", "Paris", "France", "🇫🇷", 48.73, 2.36),
@@ -69,18 +69,18 @@ CANDIDATE_DESTINATIONS = [
     Airport("CDG", "Paris Charles de Gaulle", "Paris", "France", "🇫🇷", 49.01, 2.55),
     Airport("NCE", "Nice Côte d'Azur", "Nice", "France", "🇫🇷", 43.66, 7.21),
     Airport("MRS", "Marseille Provence", "Marseille", "France", "🇫🇷", 43.43, 5.21),
-    Airport("LYS", "Lyon–Saint-Exupéry", "Lyon", "France", "🇫🇷", 45.72, 5.08),
+    Airport("LYS", "Lyon-Saint-Exupéry", "Lyon", "France", "🇫🇷", 45.72, 5.08),
     Airport("HAM", "Hamburg", "Hamburg", "Germany", "🇩🇪", 53.63, 9.98),
     Airport("DUS", "Düsseldorf", "Düsseldorf", "Germany", "🇩🇪", 51.28, 6.76),
     Airport("STR", "Stuttgart", "Stuttgart", "Germany", "🇩🇪", 48.69, 9.22),
     Airport("NAP", "Naples International", "Naples", "Italy", "🇮🇹", 40.88, 14.29),
-    Airport("CTA", "Catania–Fontanarossa", "Catania", "Italy", "🇮🇹", 37.47, 15.06),
+    Airport("CTA", "Catania-Fontanarossa", "Catania", "Italy", "🇮🇹", 37.47, 15.06),
     Airport("PMO", "Palermo", "Palermo", "Italy", "🇮🇹", 38.18, 13.10),
     Airport("PSA", "Pisa International", "Pisa", "Italy", "🇮🇹", 43.68, 10.40),
     Airport("BLQ", "Bologna Guglielmo Marconi", "Bologna", "Italy", "🇮🇹", 44.53, 11.28),
     Airport("VNO", "Vilnius International", "Vilnius", "Lithuania", "🇱🇹", 54.64, 25.28),
     Airport("TLL", "Tallinn", "Tallinn", "Estonia", "🇪🇪", 59.41, 24.83),
-    Airport("POZ", "Poznań–Ławica", "Poznań", "Poland", "🇵🇱", 52.42, 16.82),
+    Airport("POZ", "Poznań-Ławica", "Poznań", "Poland", "🇵🇱", 52.42, 16.82),
     Airport("WRO", "Wrocław Copernicus", "Wrocław", "Poland", "🇵🇱", 51.10, 16.88),
     Airport("KRK", "Kraków John Paul II", "Kraków", "Poland", "🇵🇱", 50.08, 19.78),
     Airport("SKG", "Thessaloniki", "Thessaloniki", "Greece", "🇬🇷", 40.52, 22.97),
@@ -89,7 +89,7 @@ CANDIDATE_DESTINATIONS = [
     Airport("LPA", "Gran Canaria", "Gran Canaria", "Spain", "🇪🇸", 27.93, -15.38),
     Airport("TFS", "Tenerife South", "Tenerife", "Spain", "🇪🇸", 28.04, -16.57),
     Airport("SVQ", "Seville", "Seville", "Spain", "🇪🇸", 37.42, -5.89),
-    Airport("ALC", "Alicante–Elche", "Alicante", "Spain", "🇪🇸", 38.28, -0.56),
+    Airport("ALC", "Alicante-Elche", "Alicante", "Spain", "🇪🇸", 38.28, -0.56),
     Airport("BIO", "Bilbao", "Bilbao", "Spain", "🇪🇸", 43.30, -2.91),
     Airport("FCO", "Rome Fiumicino", "Rome", "Italy", "🇮🇹", 41.80, 12.23),
     Airport("CIA", "Rome Ciampino", "Rome", "Italy", "🇮🇹", 41.80, 12.59),
@@ -117,17 +117,17 @@ CANDIDATE_DESTINATIONS = [
     Airport("AHO", "Alghero", "Alghero", "Italy", "🇮🇹", 40.63, 8.29),
     Airport("PEG", "Perugia", "Perugia", "Italy", "🇮🇹", 43.09, 12.51),
     Airport("AOI", "Ancona", "Ancona", "Italy", "🇮🇹", 43.62, 13.36),
-    Airport("TLS", "Toulouse–Blagnac", "Toulouse", "France", "🇫🇷", 43.63, 1.37),
-    Airport("BOD", "Bordeaux–Mérignac", "Bordeaux", "France", "🇫🇷", 44.83, -0.72),
+    Airport("TLS", "Toulouse-Blagnac", "Toulouse", "France", "🇫🇷", 43.63, 1.37),
+    Airport("BOD", "Bordeaux-Mérignac", "Bordeaux", "France", "🇫🇷", 44.83, -0.72),
     Airport("NTE", "Nantes Atlantique", "Nantes", "France", "🇫🇷", 47.16, -1.61),
-    Airport("MPL", "Montpellier–Méditerranée", "Montpellier", "France", "🇫🇷", 43.58, 3.96),
-    Airport("BIA", "Bastia – Poretta", "Bastia", "France", "🇫🇷", 42.55, 9.49),
+    Airport("MPL", "Montpellier-Méditerranée", "Montpellier", "France", "🇫🇷", 43.58, 3.96),
+    Airport("BIA", "Bastia - Poretta", "Bastia", "France", "🇫🇷", 42.55, 9.49),
     Airport("SCQ", "Santiago de Compostela", "Santiago", "Spain", "🇪🇸", 42.90, -8.42),
-    Airport("VGO", "Vigo–Peinador", "Vigo", "Spain", "🇪🇸", 42.23, -8.63),
+    Airport("VGO", "Vigo-Peinador", "Vigo", "Spain", "🇪🇸", 42.23, -8.63),
     Airport("OVD", "Asturias", "Oviedo", "Spain", "🇪🇸", 43.56, -6.03),
     Airport("SDR", "Santander", "Santander", "Spain", "🇪🇸", 43.43, -3.82),
     Airport("VIT", "Vitoria", "Vitoria", "Spain", "🇪🇸", 42.88, -2.72),
-    Airport("GRO", "Girona–Costa Brava", "Girona", "Spain", "🇪🇸", 41.90, 2.76),
+    Airport("GRO", "Girona-Costa Brava", "Girona", "Spain", "🇪🇸", 41.90, 2.76),
     Airport("REU", "Reus", "Reus", "Spain", "🇪🇸", 41.15, 1.17),
     Airport("RMU", "Región de Murcia", "Murcia", "Spain", "🇪🇸", 37.80, -1.12),
     Airport("LEI", "Almería", "Almería", "Spain", "🇪🇸", 36.85, -2.37),
@@ -144,14 +144,14 @@ CANDIDATE_DESTINATIONS = [
     Airport("GDN", "Gdańsk Lech Wałęsa", "Gdańsk", "Poland", "🇵🇱", 54.38, 18.47),
     Airport("KTW", "Katowice", "Katowice", "Poland", "🇵🇱", 50.47, 19.08),
     Airport("WMI", "Warsaw Modlin", "Warsaw", "Poland", "🇵🇱", 52.45, 20.65),
-    Airport("RZE", "Rzeszów–Jasionka", "Rzeszów", "Poland", "🇵🇱", 50.11, 22.02),
-    Airport("SZZ", "Solidarity Szczecin–Goleniów", "Szczecin", "Poland", "🇵🇱", 53.58, 14.90),
+    Airport("RZE", "Rzeszów-Jasionka", "Rzeszów", "Poland", "🇵🇱", 50.11, 22.02),
+    Airport("SZZ", "Solidarity Szczecin-Goleniów", "Szczecin", "Poland", "🇵🇱", 53.58, 14.90),
     Airport("BZG", "Bydgoszcz", "Bydgoszcz", "Poland", "🇵🇱", 53.10, 17.98),
     Airport("LUZ", "Lublin", "Lublin", "Poland", "🇵🇱", 51.24, 22.71),
     Airport("GOT", "Göteborg Landvetter", "Gothenburg", "Sweden", "🇸🇪", 57.66, 12.29),
     Airport("BLL", "Billund", "Billund", "Denmark", "🇩🇰", 55.74, 9.15),
     Airport("AAL", "Aalborg", "Aalborg", "Denmark", "🇩🇰", 57.09, 9.85),
-    Airport("TMP", "Tampere–Pirkkala", "Tampere", "Finland", "🇫🇮", 61.41, 23.60),
+    Airport("TMP", "Tampere-Pirkkala", "Tampere", "Finland", "🇫🇮", 61.41, 23.60),
     Airport("TKU", "Turku", "Turku", "Finland", "🇫🇮", 60.51, 22.26),
     Airport("EIN", "Eindhoven", "Eindhoven", "Netherlands", "🇳🇱", 51.46, 5.37),
     Airport("MST", "Maastricht Aachen", "Maastricht", "Netherlands", "🇳🇱", 50.91, 5.77),
@@ -194,15 +194,15 @@ CANDIDATE_DESTINATIONS = [
     Airport("LRH", "La Rochelle", "La Rochelle", "France", "🇫🇷", 46.18, -1.20),
     Airport("CMF", "Chambéry", "Chambéry", "France", "🇫🇷", 45.64, 5.88),
     Airport("LGG", "Liège", "Liège", "Belgium", "🇧🇪", 50.64, 5.44),
-    Airport("OST", "Ostend–Bruges", "Ostend", "Belgium", "🇧🇪", 51.20, 2.87),
+    Airport("OST", "Ostend-Bruges", "Ostend", "Belgium", "🇧🇪", 51.20, 2.87),
     Airport("ANR", "Antwerp", "Antwerp", "Belgium", "🇧🇪", 51.19, 4.46),
     Airport("DRS", "Dresden", "Dresden", "Germany", "🇩🇪", 51.13, 13.77),
     Airport("DTM", "Dortmund", "Dortmund", "Germany", "🇩🇪", 51.52, 7.61),
     Airport("FMM", "Memmingen", "Memmingen", "Germany", "🇩🇪", 47.99, 10.24),
-    Airport("HHN", "Frankfurt–Hahn", "Hahn", "Germany", "🇩🇪", 49.95, 7.26),
+    Airport("HHN", "Frankfurt-Hahn", "Hahn", "Germany", "🇩🇪", 49.95, 7.26),
     Airport("NRN", "Weeze", "Weeze", "Germany", "🇩🇪", 51.60, 6.14),
     Airport("SCN", "Saarbrücken", "Saarbrücken", "Germany", "🇩🇪", 49.21, 7.11),
-    Airport("ERF", "Erfurt–Weimar", "Erfurt", "Germany", "🇩🇪", 50.98, 10.96),
+    Airport("ERF", "Erfurt-Weimar", "Erfurt", "Germany", "🇩🇪", 50.98, 10.96),
     Airport("PAD", "Paderborn/Lippstadt", "Paderborn", "Germany", "🇩🇪", 51.62, 8.62),
     Airport("LBC", "Lübeck", "Lübeck", "Germany", "🇩🇪", 53.81, 10.72),
     Airport("GWT", "Sylt", "Sylt", "Germany", "🇩🇪", 54.91, 8.34),
@@ -319,14 +319,14 @@ CANDIDATE_DESTINATIONS = [
     # Morocco
     Airport("CMN", "Casablanca Mohammed V", "Casablanca", "Morocco", "🇲🇦", 33.37, -7.59),
     Airport("RAK", "Marrakech Menara", "Marrakech", "Morocco", "🇲🇦", 31.61, -8.04),
-    Airport("AGA", "Agadir–Al Massira", "Agadir", "Morocco", "🇲🇦", 30.32, -9.41),
-    Airport("FEZ", "Fès–Saïs", "Fes", "Morocco", "🇲🇦", 33.93, -4.98),
+    Airport("AGA", "Agadir-Al Massira", "Agadir", "Morocco", "🇲🇦", 30.32, -9.41),
+    Airport("FEZ", "Fès-Saïs", "Fes", "Morocco", "🇲🇦", 33.93, -4.98),
     Airport("TNG", "Tangier Ibn Battouta", "Tangier", "Morocco", "🇲🇦", 35.73, -5.92),
 
     # Tunisia
-    Airport("TUN", "Tunis–Carthage", "Tunis", "Tunisia", "🇹🇳", 36.85, 10.23),
-    Airport("NBE", "Enfidha–Hammamet", "Enfidha", "Tunisia", "🇹🇳", 36.08, 10.44),
-    Airport("DJE", "Djerba–Zarzis", "Djerba", "Tunisia", "🇹🇳", 33.87, 10.77),
+    Airport("TUN", "Tunis-Carthage", "Tunis", "Tunisia", "🇹🇳", 36.85, 10.23),
+    Airport("NBE", "Enfidha-Hammamet", "Enfidha", "Tunisia", "🇹🇳", 36.08, 10.44),
+    Airport("DJE", "Djerba-Zarzis", "Djerba", "Tunisia", "🇹🇳", 33.87, 10.77),
 
     # Egypt
     Airport("CAI", "Cairo International", "Cairo", "Egypt", "🇪🇬", 30.12, 31.41),
@@ -341,7 +341,7 @@ def get_destinations(
 ) -> List[Airport]:
     """Get valid meetup destinations.
 
-    v6.1: universe parameter — "schengen", "europe" (default), or "anywhere".
+    v6.1: universe parameter - "schengen", "europe" (default), or "anywhere".
     No more hardcoded Schengen-only filter. Anyone from any country can
     search and find meetup cities.
 
@@ -413,7 +413,7 @@ def is_schengen_airport(iata: str) -> bool:
 def expand_nearby_airports(airport: Airport, exclude_iatas: set = None) -> List[Airport]:
     """v6.1: Expand to nearby airports for any city, excluding participant origins.
 
-    No longer Schengen-gated — works for London, Istanbul, Kyiv, etc.
+    No longer Schengen-gated - works for London, Istanbul, Kyiv, etc.
     """
     if exclude_iatas is None:
         exclude_iatas = set()

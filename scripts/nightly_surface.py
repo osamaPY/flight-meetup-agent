@@ -1,5 +1,5 @@
 """
-Nightly Price Surface Builder — "Own the surface, not the query."
+Nightly Price Surface Builder - "Own the surface, not the query."
 
 Fable 5's #1 recommendation: precompute the full (origin × destination ×
 holiday) cost table. One batch job at night, then user queries are
@@ -32,7 +32,7 @@ from src.core.config import Config
 from src.core.airports import get_destinations, CANDIDATE_DESTINATIONS, SCHENGEN_COUNTRIES
 
 # ---------------------------------------------------------------------------
-# Target months — July + August 2026
+# Target months - July + August 2026
 # ---------------------------------------------------------------------------
 DATE_RANGE_START = "2026-07-01"
 DATE_RANGE_END = "2026-08-31"

@@ -1,5 +1,5 @@
 """
-Base scraper class — common interface, caching, retry logic, and rate
+Base scraper class - common interface, caching, retry logic, and rate
 limiting shared by every direct-airline scraper.
 """
 
@@ -63,7 +63,7 @@ class BaseScraper(ABC):
     def search_one_way(
         self, origin: str, destination: str, date: str
     ) -> List[Flight]:
-        """Public entry point — consults cache, rate-limits, delegates
+        """Public entry point - consults cache, rate-limits, delegates
         to _search_one_way, and stores results in cache."""
         cache_key = f"{origin}|{destination}|{date}"
         cached = self._cache_get(cache_key)

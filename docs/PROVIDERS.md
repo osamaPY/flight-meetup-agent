@@ -8,7 +8,7 @@ Last updated: 2026-07-05
 providers exist, what each is good at, and which search tier it serves. Every
 provider declares `CAPABILITIES` (a `ProviderCapabilities`): `airline`,
 `region`, `cost`, `freshness`, `bookable`, `has_calendar`, `has_one_way`, and
-`tiers`. The search engine routes work by capability — never by provider-name
+`tiers`. The search engine routes work by capability - never by provider-name
 strings.
 
 Two tiers express the discovery/verification split:
@@ -18,7 +18,7 @@ Two tiers express the discovery/verification split:
 | `DISCOVERY` | Broad, cheap "which cities/dates are worth looking at?" | May be slightly stale | Ryanair, Ryanair Calendar, Google, Google Multi-Mode |
 | `VERIFICATION` | Narrow, live "is THIS deal real right now?" | Must be live/bookable | Ryanair, Google, Google Multi-Mode, Duffel |
 
-Adding a source is one `ProviderSpec` in the registry — no edits to `main.py` or
+Adding a source is one `ProviderSpec` in the registry - no edits to `main.py` or
 the search engine. Build helpers: `build_verification_providers()` (today's
 default exact-date set), `build_discovery_providers()` (free calendar-capable
 set, paid providers always excluded).
@@ -41,12 +41,12 @@ checks inside `get_best_flight`.
 
 Direct airline readers were probed for key-free availability. Only Ryanair's
 public API answers cleanly (calendar, route graph `/api/views/locate/.../routes`,
-active-airports list — all HTTP 200 JSON). The rest are walled and would need
+active-airports list - all HTTP 200 JSON). The rest are walled and would need
 CAPTCHA/proxy evasion, which is out of scope:
 
 | Carrier / source | Result |
 |---|---|
-| Ryanair | Open — calendar, routes, airports all 200 JSON |
+| Ryanair | Open - calendar, routes, airports all 200 JSON |
 | Wizz Air | 403 (Cloudflare) |
 | easyJet | 403 Access Denied (Akamai) |
 | Vueling | Host not resolvable / walled |

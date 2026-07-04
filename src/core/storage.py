@@ -119,7 +119,7 @@ class Storage:
                 ON results(scan_id)
             """)
             # NOTE: idx_cache_lookup and idx_legs_lookup are created further
-            # down, right after their api_cache / flight_legs tables — a fresh
+            # down, right after their api_cache / flight_legs tables - a fresh
             # DB has no such tables yet at this point.
 
             # --- v5.0 Schema version tracking ---
@@ -419,7 +419,7 @@ class Storage:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             for res in results:
-                # v5.1: Dedup-at-save — skip if a cheaper deal exists for this IATA.
+                # v5.1: Dedup-at-save - skip if a cheaper deal exists for this IATA.
                 existing_min = cursor.execute(
                     "SELECT MIN(total_price + fairness_penalty) FROM results WHERE destination = ?",
                     (res.destination,)
@@ -1403,7 +1403,7 @@ class Storage:
         return {"search": search, "results": results}
 
     # ═══════════════════════════════════════════════════════════════════
-    # v6.2: Admin methods — full system visibility for the owner
+    # v6.2: Admin methods - full system visibility for the owner
     # ═══════════════════════════════════════════════════════════════════
 
     def admin_all_users(self) -> list:

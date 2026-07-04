@@ -1,6 +1,6 @@
 """Pure, testable UI helpers for the Telegram bot (v7).
 
-Everything here is string-in / string-out or plain-data — NO telegram imports,
+Everything here is string-in / string-out or plain-data - NO telegram imports,
 no Storage, no network. That keeps the whole presentation layer unit-testable
 offline (tests/test_bot_ui.py) while telegram_bot.py stays thin glue.
 
@@ -27,7 +27,7 @@ def esc(s) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Airport resolution — friends type "milan", not "BGY"
+# Airport resolution - friends type "milan", not "BGY"
 # ---------------------------------------------------------------------------
 
 _IATA_SET = {a.iata for a in CANDIDATE_DESTINATIONS}
@@ -50,7 +50,7 @@ def resolve_airports(text: str) -> Tuple[List[str], Dict[str, List[Airport]], Li
         resolved:    IATA codes ready to use (explicit codes + unambiguous cities)
         suggestions: multi-airport cities needing a pick/confirm (display name -> airports)
         unknown:     tokens we couldn't understand (may still be valid IATA
-                     codes outside our database — caller decides)
+                     codes outside our database - caller decides)
     """
     resolved: List[str] = []
     suggestions: Dict[str, List[Airport]] = {}
@@ -73,7 +73,7 @@ def resolve_airports(text: str) -> Tuple[List[str], Dict[str, List[Airport]], Li
             else:
                 suggestions[airports[0].city] = airports
         elif len(up) == 3 and up.isalpha():
-            # Plausible IATA outside our DB — pass through as unknown;
+            # Plausible IATA outside our DB - pass through as unknown;
             # caller may accept it with a warning (current v6 behavior).
             unknown.append(up)
         else:
@@ -177,13 +177,13 @@ def default_search_config() -> dict:
 
 def nights_label(cfg: dict) -> str:
     mn, mx = cfg.get("min_n", 2), cfg.get("max_n", 4)
-    return f"{mn} night{'s' if mn != 1 else ''}" if mn == mx else f"{mn}–{mx} nights"
+    return f"{mn} night{'s' if mn != 1 else ''}" if mn == mx else f"{mn}-{mx} nights"
 
 
 def fmt_settings_panel(group_name: str, member_count: int, cfg: dict) -> str:
     """The one-card search setup: all settings visible, launch always 1 tap."""
     return (
-        f"\U0001f50d <b>Search — {esc(group_name)}</b>\n"
+        f"\U0001f50d <b>Search - {esc(group_name)}</b>\n"
         f"\U0001f465 {member_count} member{'s' if member_count != 1 else ''}"
         f" · everything below is tap-to-change\n"
         f"──────────────────\n"
@@ -194,12 +194,12 @@ def fmt_settings_panel(group_name: str, member_count: int, cfg: dict) -> str:
         f"✈️ <b>Flights</b>  {'direct only' if cfg.get('direct') else 'any (cheapest)'}\n"
         f"\U0001f30d <b>Where</b>  {SCOPE_LABELS.get(cfg.get('scope'), '?')}\n"
         f"──────────────────\n"
-        f"Ready when you are — hit Launch \U0001f680"
+        f"Ready when you are - hit Launch \U0001f680"
     )
 
 
 # ---------------------------------------------------------------------------
-# Results — compact ranked list + per-city detail
+# Results - compact ranked list + per-city detail
 # ---------------------------------------------------------------------------
 
 def _grand(r: dict) -> float:
@@ -221,7 +221,7 @@ def fmt_results_list(group_name: str, deals: List[dict],
 
     medals = {1: "\U0001f947", 2: "\U0001f948", 3: "\U0001f949"}
     lines = [
-        f"\U0001f3c6 <b>Best meetups — {esc(group_name)}</b>",
+        f"\U0001f3c6 <b>Best meetups - {esc(group_name)}</b>",
         f"{len(deals)} cities · all-in per group · tap a city for details",
         "",
     ]
@@ -234,7 +234,7 @@ def fmt_results_list(group_name: str, deals: List[dict],
         out, ret = r.get("outbound_date", "?"), r.get("return_date", "?")
         n = nights_of(out, ret)
         lines.append(
-            f"{badge} {flag} <b>{esc(city)}</b> — <b>{eur(_grand(r))}</b>"
+            f"{badge} {flag} <b>{esc(city)}</b> - <b>{eur(_grand(r))}</b>"
             f" · {n}n · {conf_icon(r.get('confidence_label'))}"
         )
     if total_pages > 1:
@@ -286,16 +286,16 @@ def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
             lines.append(f"{who} · {origin} · {eur(price)}{suffix}\n{bar}")
         fair = ("✅ very fair" if spread < 15
                 else ("⚖️ ok" if spread < 50 else "⚠️ uneven"))
-        lines.append(f"spread {eur(spread)} — {fair}")
+        lines.append(f"spread {eur(spread)} - {fair}")
 
     conf = r.get("confidence_label", "")
     if conf:
         conf_txt = {
             "HIGH": "price confirmed by multiple sources",
-            "MEDIUM": "sources disagree a little — verify",
-            "SINGLE_SOURCE": "one source only — verify before booking",
-            "SINGLE": "one source only — verify before booking",
-            "LOW": "weak signal — verify before booking",
+            "MEDIUM": "sources disagree a little - verify",
+            "SINGLE_SOURCE": "one source only - verify before booking",
+            "SINGLE": "one source only - verify before booking",
+            "LOW": "weak signal - verify before booking",
         }.get(conf, conf)
         lines += ["", f"{conf_icon(conf)} {conf_txt}"]
 
@@ -340,8 +340,8 @@ def fmt_progress(group_name: str, pct: int, city: str,
     found_line = f"\n\U0001f3c6 {found} deal{'s' if found != 1 else ''} so far" \
         if found else ""
     return (
-        f"\U0001f50e <b>Searching — {esc(group_name)}</b>\n\n"
+        f"\U0001f50e <b>Searching - {esc(group_name)}</b>\n\n"
         f"{progress_bar(pct)}  {pct}%{eta}\n"
         f"\U0001f4cd now checking: {esc(city or '…')}{found_line}\n\n"
-        f"<i>You can close the chat — I'll ping everyone when it's done.</i>"
+        f"<i>You can close the chat - I'll ping everyone when it's done.</i>"
     )

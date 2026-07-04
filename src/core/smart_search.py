@@ -1,24 +1,24 @@
 """
-Smart multi-layer search engine — maximizes deal discovery by:
+Smart multi-layer search engine - maximizes deal discovery by:
 
-Layer 1 — CALENDAR PRE-SCAN
+Layer 1 - CALENDAR PRE-SCAN
   Uses Ryanair's month-level fare data to identify the cheapest travel dates
   BEFORE exact-date searching. This avoids wasting time on expensive dates.
 
-Layer 2 — ONE-WAY COMBINER
+Layer 2 - ONE-WAY COMBINER
   Stores every one-way leg discovered. Builds round-trips from the cheapest
   outbound + cheapest return, even if they're from different airlines.
   This can be 30-50% cheaper than airline-enforced round-trips.
 
-Layer 3 — PROVIDER CONSENSUS VOTING
+Layer 3 - PROVIDER CONSENSUS VOTING
   When 2+ providers agree on a price within EUR 20, confidence is HIGH.
   When only 1 provider has data, flag as "verify manually."
 
-Layer 4 — FLEXIBLE DATE SCORING
+Layer 4 - FLEXIBLE DATE SCORING
   Allows +/- 1 day flexibility. If arriving a day earlier or leaving a day
   later drops the price by >20%, that deal is surfaced.
 
-Layer 5 — SMART DESTINATION ORDERING
+Layer 5 - SMART DESTINATION ORDERING
   Sorts destinations by historical cheapness so the best deals are found
   first, even if the search is interrupted.
 """
@@ -89,14 +89,14 @@ def discovery_prescan(
     every (origin -> candidate) route that PROVABLY EXISTS (route graph), and
     save the resulting one-way legs into `flight_legs`. One HTTP call yields a
     whole month of fares, so ~N calls refresh the entire outbound price
-    surface — after which Layer 5 (cheapest-first ordering) and Layer 2 (leg
+    surface - after which Layer 5 (cheapest-first ordering) and Layer 2 (leg
     combiner) run on fresh data instead of possibly-stale history.
 
     Strictly best-effort and bounded:
       * only routes the route graph confirms (unknown graph -> origin skipped;
         a blind calendar call on a non-route is a wasted HTTP);
       * at most `max_calls` HTTP calls, `time_budget_s` seconds wall-clock;
-      * free provider only (Ryanair) — a broad scan must never cost money;
+      * free provider only (Ryanair) - a broad scan must never cost money;
       * any failure degrades to "no pre-scan", never to a broken search.
 
     Returns the number of legs saved.
@@ -118,7 +118,7 @@ def discovery_prescan(
         except Exception:
             served = None
         if not served:
-            continue  # graph unknown for this origin — don't guess
+            continue  # graph unknown for this origin - don't guess
         for dest in destination_iatas:
             if dest in served and dest != origin:
                 routes.append((origin, dest))
@@ -167,7 +167,7 @@ def build_round_trip_from_legs(
     ret_date: str,
 ) -> Optional[Flight]:
     """Layer 2: Assemble the cheapest round-trip from any combination of
-    stored one-way legs — possibly across different airlines.
+    stored one-way legs - possibly across different airlines.
 
     This can beat airline-enforced round-trips by 30-50% because you
     can fly Ryanair out and Wizz back, or any other combination.
@@ -180,7 +180,7 @@ def build_round_trip_from_legs(
             cursor = conn.cursor()
 
             # Cheapest outbound from any origin to destination on out_date
-            # v5: Require leg freshness — legs older than 48h for near-term
+            # v5: Require leg freshness - legs older than 48h for near-term
             # dates are stale and produce phantom deals. Mark as approximate.
             placeholders = ",".join("?" for _ in origins)
             cursor.execute(f"""
@@ -361,7 +361,7 @@ def sort_destinations_by_cheapness(
     expensive so the best deals are discovered first.
 
     Destinations with no historical data are placed in the middle
-    (not at the end — they might be cheap, we just don't know yet).
+    (not at the end - they might be cheap, we just don't know yet).
 
     v6: origins parameter replaces hardcoded Config.ORIGINS_A + Config.ORIGINS_B.
     """
@@ -374,7 +374,7 @@ def sort_destinations_by_cheapness(
         iata = dest.iata if hasattr(dest, "iata") else dest
         price = price_map.get(iata, None)
         if price is None:
-            return (1, 0)  # Unknown — middle priority
-        return (0, price)  # Known — cheaper first
+            return (1, 0)  # Unknown - middle priority
+        return (0, price)  # Known - cheaper first
 
     return sorted(destinations, key=_key)

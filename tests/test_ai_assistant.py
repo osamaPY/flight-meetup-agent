@@ -42,7 +42,7 @@ class _FakeClient:
 
     def chat(self, system, user, **kw):
         self.calls.append({"system": system, "user": user, **kw})
-        return "Go with Vienna — cheapest and fairest."
+        return "Go with Vienna - cheapest and fairest."
 
 
 def _patch(monkeypatch, client):
@@ -60,7 +60,7 @@ def test_recommend_uses_only_real_numbers(monkeypatch):
     fake = _FakeClient()
     _patch(monkeypatch, fake)
     out = ai.recommend_meetup(DEALS, "Weekend Crew")
-    assert out == "Go with Vienna — cheapest and fairest."
+    assert out == "Go with Vienna - cheapest and fairest."
     prompt = fake.calls[0]["user"]
     # Real figures present in the digest
     assert "Vienna" in prompt and "Budapest" in prompt
@@ -88,7 +88,7 @@ def test_city_vibe_prompt_and_cache(monkeypatch):
     fake = _FakeClient()
     _patch(monkeypatch, fake)
     a = ai.city_vibe("Vienna", "Austria", 3, "August")
-    assert a == "Go with Vienna — cheapest and fairest."
+    assert a == "Go with Vienna - cheapest and fairest."
     assert "Vienna" in fake.calls[0]["user"] and "3 nights" in fake.calls[0]["user"]
     ai.city_vibe("Vienna", "Austria", 3, "August")   # cache
     assert len(fake.calls) == 1

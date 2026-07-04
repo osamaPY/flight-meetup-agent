@@ -17,7 +17,7 @@ class Flight:
     # --- v5.0+ fields ---
     airline: str = ""               # IATA airline code e.g. "FR", "LH"
     flight_number: str = ""         # e.g. "FR1234"
-    departure_time: str = ""        # "YYYY-MM-DD HH:MM" — for duration calc
+    departure_time: str = ""        # "YYYY-MM-DD HH:MM" - for duration calc
     currency: str = "EUR"           # ISO 4217
     deep_link: str = ""             # Direct booking URL
     cabin_bag_included: bool = False  # True = cabin bag in fare
@@ -225,7 +225,7 @@ def generate_booking_link(origin: str, dest: str, outbound: str, return_date: st
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# v6: N-person scoring (new — use this for 2-4 people)
+# v6: N-person scoring (new - use this for 2-4 people)
 # ═══════════════════════════════════════════════════════════════════════════
 
 def score_group_meetup(

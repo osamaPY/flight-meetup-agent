@@ -1,7 +1,7 @@
-"""v5: iCal export — generate .ics calendar file for a chosen deal.
+"""v5: iCal export - generate .ics calendar file for a chosen deal.
 
 Usage: python scripts/ical_export.py <result_id>
-Saves to data/flight_meetup.ics — importable into Google Calendar, Apple Calendar, Outlook.
+Saves to data/flight_meetup.ics - importable into Google Calendar, Apple Calendar, Outlook.
 """
 
 import sys
@@ -87,7 +87,7 @@ def export_deal(result_id: int, output_path: str = "data/flight_meetup.ics"):
         dtend=_fmt_date((ret_dt + timedelta(days=1)).strftime("%Y-%m-%d")),
         summary=summary,
         description=description,
-        location=f"{dest} — {dest_name}",
+        location=f"{dest} - {dest_name}",
     )
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
