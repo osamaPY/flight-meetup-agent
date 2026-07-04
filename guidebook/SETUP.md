@@ -52,7 +52,9 @@ Recommended first flow:
 1. Send `/start`.
 2. Tap New group and type a name.
 3. Enter your airports (a city name like `milan` works, or codes like `BGY, MXP`).
-4. Tap Invite and share the link so friends can join in one tap.
+4. Add friends: tap Add a friend to enter someone's airports yourself, or tap
+   Invite to share a one-tap join link. Manual friends count in the search but
+   are never messaged; remove them anytime under Manage people.
 5. Tap Search now (smart defaults) or Custom to tune the settings, then Launch.
 6. Tap Results, then a city, to see the full breakdown; use Verify before booking.
 

@@ -69,6 +69,21 @@ def _uname(u):
     return uu.username or uu.first_name or str(uu.id)
 
 
+# Members the owner added by hand (they have no Telegram account) get a
+# synthetic id with this prefix. They count in searches but are never messaged.
+_MANUAL_PREFIX = "manual_"
+
+
+def _is_manual(telegram_id) -> bool:
+    return str(telegram_id).startswith(_MANUAL_PREFIX)
+
+
+def _member_name(m) -> str:
+    """Display name for a member: label first (set for everyone incl. manual),
+    then username, then id."""
+    return m.get('label') or m.get('username') or m.get('telegram_id')
+
+
 def _is_owner(u):
     uid = str(u.effective_user.id)
     aid = str(Config.TELEGRAM_CHAT_ID)
@@ -174,10 +189,16 @@ async def scr_hub(update, context, gid):
 
     lines = [f"✈️ <b>{esc(g['name'])}</b>", ""]
     for m in members:
-        who = "You" if m['telegram_id'] == me else esc(m['username'])
+        if m['telegram_id'] == me:
+            who = "You"
+        else:
+            who = esc(_member_name(m))
+            if _is_manual(m['telegram_id']):
+                who += " <i>(added by you)</i>"
         lines.append(f"👤 {who} - {esc(', '.join(m['origins']))}")
     if len(members) < 2:
-        lines += ["", "💡 Invite at least 1 friend to search together."]
+        lines += ["", "💡 Add a friend's airports below (or invite them) "
+                      "so we have at least 2 people to search for."]
 
     searches = s.list_searches_by_group(gid, limit=1)
     if searches:
@@ -186,18 +207,18 @@ async def scr_hub(update, context, gid):
         lines += ["", f"{icon} Last search: {sr['status']}"
                       f" · {sr.get('result_count', 0)} deals"]
 
-    rows = []
-    if len(members) >= 2:
-        rows.append([_btn("🚀 Search now", f"go_{gid}"),
-                     _btn("⚙️ Custom", f"cfg_{gid}")])
-        rows.append([_btn("🏆 Results", f"res_{gid}"),
-                     _btn("📤 Invite", f"inv_{gid}")])
-    else:
-        rows.append([_btn("📤 Invite friends", f"inv_{gid}")])
-        rows.append([_btn("🚀 Search now", f"go_{gid}"),
-                     _btn("🏆 Results", f"res_{gid}")])
-    rows.append([_btn("✏️ My airports", f"myap_{gid}"),
-                 _btn("🚪 Leave", f"leave_{gid}")])
+    manual_count = sum(1 for m in members if _is_manual(m['telegram_id']))
+    rows = [
+        [_btn("🚀 Search now", f"go_{gid}"), _btn("⚙️ Custom", f"cfg_{gid}")],
+        [_btn("➕ Add a friend", f"addf_{gid}"),
+         _btn("📤 Invite link", f"inv_{gid}")],
+        [_btn("🏆 Results", f"res_{gid}"),
+         _btn("✏️ My airports", f"myap_{gid}")],
+    ]
+    last = [_btn("🚪 Leave", f"leave_{gid}")]
+    if manual_count:
+        last.insert(0, _btn("👥 Manage people", f"ppl_{gid}"))
+    rows.append(last)
     rows.append([HOME_BTN])
     await _show(update, context, "\n".join(lines), rows)
 
@@ -240,6 +261,47 @@ async def scr_leave(update, context, gid, confirmed=False):
         return
     s.leave_group(gid, _tid(update))
     await scr_home(update, context)
+
+
+async def start_add_friend(update, context, gid):
+    """Owner adds a friend by hand: name, then airports. No invite needed."""
+    g = Storage().get_group(gid)
+    if not g:
+        await _show(update, context, "❌ Group not found.", [[HOME_BTN]])
+        return
+    context.user_data['await'] = {'kind': 'friend_name', 'gid': gid}
+    await _show(
+        update, context,
+        f"➕ <b>Add a friend to {esc(g['name'])}</b>\n\n"
+        "What's their name? It's just a label for the results - they don't "
+        "need Telegram or to do anything.\n\n"
+        "Type their name below 👇",
+        [[_btn("⬅️ Back", f"hub_{gid}")]])
+
+
+async def scr_people(update, context, gid):
+    """Manage members: list everyone, remove manually-added ones."""
+    s = Storage()
+    g = s.get_group(gid)
+    if not g:
+        await _show(update, context, "❌ Group not found.", [[HOME_BTN]])
+        return
+    members = s.get_group_members(gid)
+    me = _tid(update)
+    lines = [f"👥 <b>People in {esc(g['name'])}</b>", ""]
+    rows = []
+    for m in members:
+        manual = _is_manual(m['telegram_id'])
+        tag = (" <i>(added by you)</i>" if manual
+               else (" <i>(you)</i>" if m['telegram_id'] == me else ""))
+        lines.append(f"👤 {esc(_member_name(m))}{tag} - "
+                     f"{esc(', '.join(m['origins']))}")
+        if manual:
+            rows.append([_btn(f"🗑 Remove {_member_name(m)}",
+                              f"rmf_{gid}_{m['telegram_id']}")])
+    rows.append([_btn("➕ Add a friend", f"addf_{gid}")])
+    rows.append([_btn("⬅️ Back", f"hub_{gid}")])
+    await _show(update, context, "\n".join(lines), rows)
 
 
 async def scr_help(update, context):
@@ -427,10 +489,12 @@ async def launch_search(update, context, gid, cfg=None):
     members = s.get_group_members(gid)
     if len(members) < 2:
         await _show(update, context,
-                    f"👥 <b>{esc(g['name'])}</b> needs at least 2 members "
+                    f"👥 <b>{esc(g['name'])}</b> needs at least 2 people "
                     f"before a search makes sense.\n\n"
-                    f"Invite a friend first - one tap for them to join.",
-                    [[_btn("📤 Invite friends", f"inv_{gid}")],
+                    f"Add a friend's airports yourself, or send them the "
+                    f"invite link.",
+                    [[_btn("➕ Add a friend", f"addf_{gid}")],
+                     [_btn("📤 Invite link", f"inv_{gid}")],
                      [_btn("⬅️ Back", f"hub_{gid}")]])
         return
     if context.bot_data.get(f"sa_{gid}"):
@@ -440,7 +504,7 @@ async def launch_search(update, context, gid, cfg=None):
         return
 
     cfg = cfg or _cfg(context, gid)
-    participants = [ParticipantGroup(label=m['username'], origins=m['origins'])
+    participants = [ParticipantGroup(label=_member_name(m), origins=m['origins'])
                     for m in members]
     req = SearchRequest(
         participants=participants,
@@ -761,12 +825,16 @@ async def start_newgroup(update, context):
 
 
 async def _ask_airports(update, context, purpose, gid=None, gname=None,
-                        group_label=None):
+                        group_label=None, friend=None):
     context.user_data['await'] = {'kind': 'origins', 'purpose': purpose,
-                                  'gid': gid, 'gname': gname}
-    where = f" for <b>{esc(group_label)}</b>" if group_label else ""
+                                  'gid': gid, 'gname': gname, 'friend': friend}
+    if friend:
+        prompt = f"🛫 <b>Where does {esc(friend)} fly from?</b>"
+    else:
+        where = f" for <b>{esc(group_label)}</b>" if group_label else ""
+        prompt = f"🛫 <b>Where do you fly from{where}?</b>"
     await update.effective_message.reply_text(
-        f"🛫 <b>Where do you fly from{where}?</b>\n\n"
+        f"{prompt}\n\n"
         "Type a city or airport code - several are fine:\n"
         "<i>milan</i> · <i>riga</i> · <i>BGY, MXP</i> · <i>london</i>",
         parse_mode='HTML')
@@ -819,7 +887,8 @@ async def _handle_origins_text(update, context, awaiting):
         ap = {'base': resolved + accepted_unknown, 'sel': sel,
               'unknown_note': accepted_unknown,
               'purpose': awaiting.get('purpose'),
-              'gid': awaiting.get('gid'), 'gname': awaiting.get('gname')}
+              'gid': awaiting.get('gid'), 'gname': awaiting.get('gname'),
+              'friend': awaiting.get('friend')}
         context.user_data['ap'] = ap
         await update.effective_message.reply_text(
             _ap_text(ap), parse_mode='HTML',
@@ -828,10 +897,11 @@ async def _handle_origins_text(update, context, awaiting):
 
     await _finish_airports(update, context, resolved + accepted_unknown,
                            awaiting.get('purpose'), awaiting.get('gid'),
-                           awaiting.get('gname'))
+                           awaiting.get('gname'), awaiting.get('friend'))
 
 
-async def _finish_airports(update, context, origins, purpose, gid, gname):
+async def _finish_airports(update, context, origins, purpose, gid, gname,
+                           friend=None):
     """Airports confirmed → complete whichever flow needed them."""
     s = Storage()
     tid = _tid(update)
@@ -885,6 +955,31 @@ async def _finish_airports(update, context, origins, purpose, gid, gname):
             parse_mode='HTML',
             reply_markup=_kb([[_btn("✈️ Back to group", f"hub_{gid}")]]))
 
+    elif purpose == 'addfriend':
+        g = s.get_group(gid)
+        if not g:
+            await update.effective_message.reply_text("❌ Group not found.")
+            return
+        name = (friend or "Friend").strip()[:40]
+        # Manual members have no Telegram account: give them a synthetic id so
+        # they count as a participant in the search but are never messaged.
+        import secrets
+        manual_id = f"{_MANUAL_PREFIX}{secrets.token_hex(4)}"
+        s.join_group(gid, manual_id, name, origins)
+        members = s.get_group_members(gid)
+        await update.effective_message.reply_text(
+            f"✅ Added <b>{esc(name)}</b> flying from "
+            f"{esc(', '.join(origins))}.\n"
+            f"👥 {esc(g['name'])} now has {len(members)} "
+            f"{'person' if len(members) == 1 else 'people'}. "
+            f"You can search whenever you're ready.",
+            parse_mode='HTML',
+            reply_markup=_kb([
+                [_btn("➕ Add another", f"addf_{gid}"),
+                 _btn("🚀 Search now", f"go_{gid}")],
+                [_btn("✈️ Open group", f"hub_{gid}")],
+            ]))
+
 
 async def on_message(update, context):
     """All free-text lands here; dispatch on the awaited flag."""
@@ -905,6 +1000,15 @@ async def on_message(update, context):
             return
         await _ask_airports(update, context, 'grp', gname=name,
                             group_label=name)
+
+    elif kind == 'friend_name':
+        name = update.message.text.strip()[:40]
+        if not name:
+            context.user_data['await'] = awaiting
+            await update.effective_message.reply_text("Type their name 🙂")
+            return
+        await _ask_airports(update, context, 'addfriend',
+                            gid=awaiting['gid'], friend=name)
 
     elif kind == 'origins':
         await _handle_origins_text(update, context, awaiting)
@@ -1289,7 +1393,18 @@ async def on_callback(update, context):
             else:
                 await _finish_airports(update, context, origins,
                                        ap['purpose'], ap.get('gid'),
-                                       ap.get('gname'))
+                                       ap.get('gname'), ap.get('friend'))
+
+    # ── manual friends ──
+    elif d.startswith("addf_"):
+        await start_add_friend(update, context, d[5:])
+    elif d.startswith("ppl_"):
+        await scr_people(update, context, d[4:])
+    elif d.startswith("rmf_"):
+        _, gid, mid = d.split("_", 2)   # mid = "manual_...."
+        if _is_manual(mid):
+            Storage().leave_group(gid, mid)
+        await scr_people(update, context, gid)
 
     # ── results ──
     elif d.startswith("res_"):

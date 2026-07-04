@@ -18,8 +18,10 @@ luggage assumptions, and airport transfer costs.
 The current product is a Telegram bot (v7):
 
 1. Create a group.
-2. Invite friends with a one-tap link.
-3. Everyone enters their airports (city names like "milan" work, not just codes).
+2. Add your friends: either enter their airports yourself with Add a friend
+   (handy when you already know where they fly from), or send a one-tap invite
+   link so they join and enter their own.
+3. Airports accept city names like "milan", not just codes.
 4. Hit Search now for smart defaults, or open the settings panel to tune it.
 5. The bot scans destinations and dates; live progress updates in place.
 6. Review the ranked city list and tap a city for the full breakdown.
