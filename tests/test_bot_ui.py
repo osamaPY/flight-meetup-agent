@@ -239,7 +239,7 @@ def test_result_detail_full_card():
     assert "You" in text and "Sara" in text
     assert "Fairness" in text and "spread €20" in text
     assert "confirmed by multiple sources" in text
-    assert "Open ticket search" in text
+    assert "Book this flight" in text
     assert "google.com/travel/flights" in text       # booking links
 
 

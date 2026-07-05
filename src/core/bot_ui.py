@@ -544,7 +544,7 @@ def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
                 lines.append("  has a stop - check the connection when booking")
             if arrival:
                 lines.append(f"  arrives {esc(fmt_datetime(arrival))}")
-            lines.append(f"  <a href=\"{route_link}\">Open ticket search</a>")
+            lines.append(f"  \U0001f3ab <a href=\"{route_link}\">Book this flight</a>")
         lines.append(f"\n\u2696\ufe0f Fairness: {_fairness(spread)} (spread {eur(spread)})")
         arrivals_block = fmt_arrivals(participants)
         if arrivals_block:
