@@ -430,6 +430,51 @@ class AmadeusProvider(FlightProvider):
 
 
 # ---------------------------------------------------------------------------
+# Travelpayouts (Aviasales) - free flight-data API, works from a VPS IP
+# ---------------------------------------------------------------------------
+
+class TravelpayoutsProvider(FlightProvider):
+    """Aviasales cached fares via Travelpayouts' free Data API.
+
+    Unlike the Google scraper, this is a real HTTP API, so it keeps working
+    from a datacenter/VPS IP where Google Flights and airline sites get
+    blocked. Prices are cached (approximate), so its Flights carry
+    is_approximate=True - verify before booking. Enabled only when a token
+    is configured."""
+
+    CAPABILITIES = ProviderCapabilities(
+        key="travelpayouts",
+        label="Travelpayouts",
+        airline=None,            # aggregator across many airlines
+        region="GLOBAL",
+        cost="free",
+        freshness="cached",
+        bookable=False,
+        has_round_trip=True,
+        has_one_way=False,
+        has_calendar=False,
+        tiers=frozenset({DISCOVERY, VERIFICATION}),
+    )
+
+    def __init__(self):
+        super().__init__()
+        from src.clients.travelpayouts_client import TravelpayoutsClient
+        self.client = TravelpayoutsClient()
+
+    def name(self) -> str:
+        return "Travelpayouts"
+
+    def search_round_trip(self, origin, dest, out_from, out_to, in_from, in_to):
+        try:
+            return self.client.search_round_trip(origin, dest, out_from, in_from)
+        except Exception:
+            return None
+
+    def _live_health_check(self) -> bool:
+        return self.client.health()
+
+
+# ---------------------------------------------------------------------------
 # 5. Ryanair Calendar - DISCOVERY tier
 # ---------------------------------------------------------------------------
 

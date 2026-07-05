@@ -30,6 +30,11 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+    # ── Travelpayouts / Aviasales (optional, FREE flight-data API) ──
+    # Works from a VPS IP where Google/airline sites get blocked. Cached prices.
+    # Free affiliate token at travelpayouts.com.
+    TRAVELPAYOUTS_TOKEN = os.getenv("TRAVELPAYOUTS_TOKEN", "")
+
     # ── Duffel (optional paid GDS provider) ──
     DUFFEL_TOKEN = os.getenv("DUFFEL_TOKEN")
 

@@ -65,10 +65,16 @@ def test_discovery_tier_has_calendar_capability():
     assert any(c.has_calendar for c in disc), "no calendar source in discovery"
 
 
-def test_build_verification_free_matches_legacy_set():
-    """Guest (free, exact-date) set == the pre-refactor hardcoded trio."""
+def test_build_verification_free_core_set():
+    """The always-on free, exact-date providers are the original trio. Extra
+    free providers (e.g. Travelpayouts) are token-gated, so they only appear
+    when a key is configured - never in the no-key baseline."""
+    from src.core.config import Config
     names = [p.name() for p in reg.build_providers(tier=reg.VERIFICATION, include_paid=False)]
-    assert names == ["Ryanair", "Internal Google Scraper", "Google Multi-Mode"]
+    for core in ("Ryanair", "Internal Google Scraper", "Google Multi-Mode"):
+        assert core in names, f"missing core provider {core}: {names}"
+    if not Config.TRAVELPAYOUTS_TOKEN:
+        assert "Travelpayouts" not in names
 
 
 def test_build_discovery_includes_calendar_excludes_paid():

@@ -119,12 +119,21 @@ def _build_registry() -> List[ProviderSpec]:
         MultiGoogleScraperProvider,
         RyanairCalendarProvider,
         RyanairProvider,
+        TravelpayoutsProvider,
     )
 
     return [
         ProviderSpec(RyanairProvider.CAPABILITIES, RyanairProvider),
         ProviderSpec(GoogleScraperProvider.CAPABILITIES, GoogleScraperProvider),
         ProviderSpec(MultiGoogleScraperProvider.CAPABILITIES, MultiGoogleScraperProvider),
+        # Free flight-data API that works from a VPS IP (Google/airline sites
+        # often block datacenter IPs). Cached prices, so discovery-grade;
+        # enabled once TRAVELPAYOUTS_TOKEN is set.
+        ProviderSpec(
+            TravelpayoutsProvider.CAPABILITIES,
+            TravelpayoutsProvider,
+            enabled=lambda: bool(Config.TRAVELPAYOUTS_TOKEN),
+        ),
         # Discovery-only: cheap month-level Ryanair fare surface. Not returned to
         # the exact-date (VERIFICATION) search, so it is non-breaking today; a
         # future calendar-first discovery pipeline pulls it via tier=DISCOVERY.
