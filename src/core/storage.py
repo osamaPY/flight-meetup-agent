@@ -520,11 +520,15 @@ class Storage:
                 conn.commit()
             return count
 
-    def purge_city_duplicates(self, airport_list=None) -> int:
-        """v5.1: Keep only the CHEAPEST deal per city. Delete all other rows.
+    def purge_city_duplicates(self, airport_list=None, search_id=None) -> int:
+        """Keep only the CHEAPEST deal per city, deleting other rows.
 
-        Uses the provided airport list to map IATA codes to city names.
-        Two airports in the same city (WAW + WMI = Warsaw) are deduped together.
+        IMPORTANT: this is always scoped to ONE search so it can never delete
+        another search's or another group's results. Pass a search_id to dedupe
+        that search's rows; pass None to dedupe only legacy rows that have no
+        search_id (the standalone CLI search). It never touches the whole table.
+
+        Two airports in the same city (WAW + WMI = Warsaw) dedupe together.
         Returns count of deleted rows.
         """
         if airport_list is None:
@@ -533,16 +537,23 @@ class Storage:
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, destination, total_price, fairness_penalty, outbound_date, return_date
-                FROM results ORDER BY (total_price + fairness_penalty) ASC
-            """)
+            if search_id:
+                cursor.execute("""
+                    SELECT id, destination FROM results
+                    WHERE search_id = ?
+                    ORDER BY (total_price + COALESCE(fairness_penalty, 0)) ASC
+                """, (search_id,))
+            else:
+                cursor.execute("""
+                    SELECT id, destination FROM results
+                    WHERE search_id IS NULL OR search_id = ''
+                    ORDER BY (total_price + COALESCE(fairness_penalty, 0)) ASC
+                """)
             rows = cursor.fetchall()
 
-            kept = set()  # city names we've already kept
+            kept = set()  # city names we've already kept (within this search)
             deleted = 0
-            for row in rows:
-                row_id, dest_iata, price, penalty, out_d, ret_d = row
+            for row_id, dest_iata in rows:
                 city = iata_to_city.get(dest_iata, dest_iata)
                 if city in kept:
                     cursor.execute("DELETE FROM results WHERE id = ?", (row_id,))

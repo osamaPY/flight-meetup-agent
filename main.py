@@ -668,9 +668,14 @@ def booking_mode(
     if all_results:
         ranked = rank_results(all_results)
         print_results_table(ranked, f"TOP DEALS ({mode_label})", limit=20)
-        purged = storage.purge_city_duplicates()
-        if purged > 0:
-            log_info(f"🧹 Cleaned {purged} duplicate city entries from database")
+        # Only the standalone CLI search dedupes its own (search_id-less) rows.
+        # A bot/group search keeps every row: results are deduped by city at
+        # display time, and the extra date-variant rows power "other dates".
+        # A global purge here used to delete other searches'/groups' results.
+        if not has_search_record:
+            purged = storage.purge_city_duplicates(search_id=None)
+            if purged > 0:
+                log_info(f"🧹 Cleaned {purged} duplicate city entries from database")
     else:
         log_info("No new matches found.")
 
