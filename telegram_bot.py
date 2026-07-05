@@ -599,15 +599,16 @@ async def scr_panel_setting(update, context, gid, key):
 
     elif key == "scope":
         rows = [
-            [_btn("🌍 All of Europe", f"cfgv_{gid}_scope_europe")],
+            [_btn("🌍 Anywhere in Europe", f"cfgv_{gid}_scope_europe")],
             [_btn("🛂 Schengen countries only", f"cfgv_{gid}_scope_schengen")],
-            [_btn("🌐 Everywhere", f"cfgv_{gid}_scope_anywhere")],
+            [_btn("🌐 All cities we cover", f"cfgv_{gid}_scope_anywhere")],
             [back],
         ]
         head = _wiz_head(context, gid, "scope",
                          "🌍 <b>Where should we look for a meeting point?</b>",
-                         "Which countries to consider. Schengen skips places "
-                         "that may need a separate visa or border check.")
+                         "We currently cover cities across Europe (not other "
+                         "continents yet). Schengen skips places that may need "
+                         "a separate visa or border check.")
         await _show(update, context, head, rows)
 
     else:
@@ -806,12 +807,23 @@ async def launch_search(update, context, gid, cfg=None):
 # ═══════════════════════════════ RESULTS ═══════════════════════════════
 
 def _load_deals(context, gid):
-    """Load latest-search results for a group; returns (all, deduped_by_city)."""
+    """Load the group's best available results; returns (search, all, deduped).
+
+    Picks the newest search that actually produced deals, so one person's
+    empty or failed run never hides results an earlier run already found for
+    the group. If a search is currently running, that one is shown (so the
+    launcher sees live progress); if nothing has results yet, the newest is
+    shown (its 'running' / 'no deals' state)."""
     s = Storage()
-    searches = s.list_searches_by_group(gid, limit=1)
+    searches = s.list_searches_by_group(gid, limit=15)
     if not searches:
         return None, None, None
-    results = s.get_search_results(searches[0]['id'])
+    if searches[0].get('status') == 'running':
+        chosen = searches[0]
+    else:
+        chosen = next((sr for sr in searches
+                       if (sr.get('result_count') or 0) > 0), searches[0])
+    results = s.get_search_results(chosen['id'])
     seen, deduped = set(), []
     for r in results:
         city = r.get('dest_city') or ui.city_of(r['destination'])
@@ -822,7 +834,7 @@ def _load_deals(context, gid):
     context.user_data['r_all'] = results
     context.user_data['r_deals'] = deduped
     context.user_data['r_gid'] = gid
-    return searches[0], results, deduped
+    return chosen, results, deduped
 
 
 async def scr_results(update, context, gid, page=0):

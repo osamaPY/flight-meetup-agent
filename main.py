@@ -545,6 +545,17 @@ def booking_mode(
     total_steps = sum(len(pairs) for _, pairs in exact_pairs_by_window) * len(expanded_targets)
     step = 0
 
+    # ── Provider reachability check (helps diagnose "0 deals" on a server) ──
+    # From a datacenter IP some sources (Google Flights, sometimes Ryanair)
+    # can be blocked even though the bot itself reaches Telegram fine. Log
+    # exactly what's usable so `journalctl -u flight-bot` shows the cause.
+    health = {p.name(): p.is_healthy() for p in providers}
+    log_info(f"Provider health: {health}")
+    if not any(health.values()):
+        log_error("No providers reported healthy - the server may be unable to "
+                  "reach the flight data sources (datacenter IP blocking). "
+                  "The search will still attempt every provider once.")
+
     for window, date_pairs in exact_pairs_by_window:
         log_info(f"Scanning window {window.depart_earliest} to {window.depart_latest}...")
         for out_from, in_from in date_pairs:
@@ -558,7 +569,10 @@ def booking_mode(
                     break
 
                 # ── SMART LAYER 4: Flexible date search (N people) ──
-                active = [p for p in providers if p.is_healthy()]
+                # Prefer healthy providers, but if a flaky health check marks
+                # them all down, still attempt every provider rather than
+                # silently returning zero results.
+                active = [p for p in providers if p.is_healthy()] or providers
                 meetup_candidates = flexible_date_search(
                     storage,
                     member_origins,

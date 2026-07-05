@@ -178,9 +178,9 @@ LUGGAGE_LABELS = {
     "none": "personal item only",
 }
 SCOPE_LABELS = {
-    "europe": "Europe",
+    "europe": "Anywhere in Europe",
     "schengen": "Schengen countries only",
-    "anywhere": "Everywhere",
+    "anywhere": "All cities we cover",
 }
 
 
