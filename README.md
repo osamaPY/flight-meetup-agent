@@ -35,7 +35,7 @@ Tap that button and the LLM comes back with something like: *"Vienna. It's the c
 
 ```bash
 git clone https://github.com/osamaPY/flight-meetup-agent.git
-cd flightAgent
+cd flight-meetup-agent
 pip install -r requirements.txt
 cp .env.example .env
 python telegram_bot.py
@@ -48,6 +48,8 @@ python -m pytest -q         # tests, no network needed
 python main.py health       # check which providers are up
 python flight_api_server.py # optional REST API on :8000
 ```
+
+To run it 24/7 on a server (AWS free-tier or any Linux VPS), there's a one-command setup in [deploy/](deploy/README.md): clone the repo, run `bash deploy/setup.sh`, add your token, and a `systemd` service keeps it alive across crashes and reboots.
 
 ## How it's built
 

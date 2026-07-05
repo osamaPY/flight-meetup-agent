@@ -1,0 +1,31 @@
+# systemd unit for the Flight Meetup Telegram bot.
+# The placeholders (__USER__, __WORKDIR__, __VENV__) are filled in by
+# deploy/setup.sh. To install by hand instead, replace them yourself and copy
+# this file to /etc/systemd/system/flight-bot.service.
+
+[Unit]
+Description=Flight Meetup Telegram bot
+After=network-online.target
+Wants=network-online.target
+# Keep restarting forever, even after a burst of quick failures (e.g. a
+# flaky network on boot). Never give up.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__WORKDIR__
+# The bot reads its config from .env in the working directory (python-dotenv),
+# and stores its SQLite db under ./data, so WorkingDirectory must be the repo.
+ExecStart=__VENV__/bin/python telegram_bot.py
+Restart=always
+RestartSec=5
+# Log to the journal (view with: journalctl -u flight-bot -f)
+StandardOutput=journal
+StandardError=journal
+# Light hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
