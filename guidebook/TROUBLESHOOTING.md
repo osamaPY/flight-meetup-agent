@@ -85,29 +85,38 @@ hides the group's good results. Groups are otherwise fully isolated: every
 search is keyed by its group and its results by that search's id, so groups
 never see each other's data.
 
-## Amadeus was removed as a free option
+## Optional providers do not appear
 
-**Symptom:** setup docs used to suggest Amadeus for free coverage.
+**Symptom:** Travelpayouts, Amadeus, or Duffel does not show up in provider
+health or search results.
 
-**Cause:** Amadeus discontinued its free Self-Service test tier in 2026, so it
-is no longer a no-cost source.
+**Cause:** optional providers are enabled only when their credentials and safety
+gates allow them. Travelpayouts needs `TRAVELPAYOUTS_TOKEN`; Amadeus needs both
+`AMADEUS_CLIENT_ID` and `AMADEUS_CLIENT_SECRET`; Duffel needs `DUFFEL_TOKEN`,
+owner-mode usage, and remaining `DUFFEL_DAILY_BUDGET`.
 
-**Fix:** removed Amadeus from the setup, README, and providers guide.
-Travelpayouts is the recommended free, server-friendly source now. The dormant
-Amadeus provider code remains but nothing points people at it.
+**Fix:** add the relevant keys to `.env`, restart the bot, then run
+`python main.py health`. On cloud servers, Travelpayouts is the recommended
+free fallback because it is a real API and is much less sensitive to datacenter
+IP blocking than Google scraping.
 
 ## Search felt slow / "brute force"
 
 **Symptom:** searches, especially with the widest region, took a long time.
 
-**Cause:** the sweep covers a large destination set (a couple hundred cities)
-across date pairs and providers. On a small server, and especially when a
-source is timing out, that adds up. On a blocked server it is worst of all
-because every call fails slowly.
+**Cause:** the sweep covers a large destination set across date pairs,
+participant origins, nearby airports, flexible-date variants, and providers. A
+provider-call cap that is too low can stop after only a few visible cities,
+even though the destination list is much larger. On a blocked server it is
+worst of all because every call fails slowly.
 
-**Status:** the primary cause on a server is the IP blocking above; fix that
-first. Bounded scan size and per-source timeouts are the next tuning lever once
-sources are reachable.
+**Status:** the default cap is high enough for a real Europe sweep. If Telegram
+says "safety cap reached", increase `MAX_API_CALLS_PER_RUN` or set it to `0`
+for an unlimited/brute-force run. With the default
+`SEARCH_DATE_VARIANT_MODE=auto`, capped searches prioritize exact-date breadth
+so more cities are checked before flexible date variants spend the budget. The
+primary cause on a server can still be IP blocking; fix that first if every
+provider is timing out.
 
 ## "Conflict" errors in the logs
 

@@ -412,19 +412,35 @@ class Storage:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM results")
             cursor.execute("DELETE FROM price_history")
+            cursor.execute("UPDATE searches SET result_count = 0")
             conn.commit()
             print("Database results cleared.")
     def save_results(self, results: List[Any]) -> None:
-        now = datetime.now()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with self._get_connection() as conn:
             cursor = conn.cursor()
             for res in results:
-                # v5.1: Dedup-at-save - skip if a cheaper deal exists for this IATA.
+                # v5.1: Dedup-at-save - skip only duplicate route/date rows in
+                # the same scan. Other searches must never suppress this run.
+                scan_id = getattr(res, 'scan_id', '') or ''
                 existing_min = cursor.execute(
-                    "SELECT MIN(total_price + fairness_penalty) FROM results WHERE destination = ?",
-                    (res.destination,)
+                    """
+                    SELECT MIN(
+                        (CASE WHEN grand_total IS NOT NULL AND grand_total > 0
+                              THEN grand_total ELSE total_price END)
+                        + COALESCE(fairness_penalty, 0)
+                    )
+                    FROM results
+                    WHERE destination = ?
+                      AND outbound_date = ?
+                      AND return_date = ?
+                      AND COALESCE(scan_id, '') = ?
+                    """,
+                    (res.destination, res.outbound_date, res.return_date, scan_id)
                 ).fetchone()[0]
-                new_score = res.total_price + getattr(res, 'fairness_penalty', 0)
+                new_score = (
+                    getattr(res, 'grand_total', 0) or res.total_price
+                ) + getattr(res, 'fairness_penalty', 0)
                 if existing_min is not None and new_score >= existing_min:
                     continue  # Already have a better or equal deal for this airport
 
@@ -450,7 +466,7 @@ class Storage:
                     getattr(res, 'flight_numbers', ''),
                     getattr(res, 'confidence_label', ''),
                     getattr(res, 'deal_percentile', 0),
-                    getattr(res, 'scan_id', ''),
+                    scan_id,
                     getattr(res, 'nights', 2),
                 ))
                 
@@ -541,13 +557,21 @@ class Storage:
                 cursor.execute("""
                     SELECT id, destination FROM results
                     WHERE search_id = ?
-                    ORDER BY (total_price + COALESCE(fairness_penalty, 0)) ASC
+                    ORDER BY (
+                        CASE WHEN grand_total IS NOT NULL AND grand_total > 0
+                             THEN grand_total ELSE total_price END
+                        + COALESCE(fairness_penalty, 0)
+                    ) ASC
                 """, (search_id,))
             else:
                 cursor.execute("""
                     SELECT id, destination FROM results
                     WHERE search_id IS NULL OR search_id = ''
-                    ORDER BY (total_price + COALESCE(fairness_penalty, 0)) ASC
+                    ORDER BY (
+                        CASE WHEN grand_total IS NOT NULL AND grand_total > 0
+                             THEN grand_total ELSE total_price END
+                        + COALESCE(fairness_penalty, 0)
+                    ) ASC
                 """)
             rows = cursor.fetchall()
 
@@ -756,7 +780,7 @@ class Storage:
         """Saves a flight result into the API cache."""
         if not flight:
             return
-        now = datetime.now()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         arrival_time = _coerce_arrival_time(flight.arrival_time, flight.outbound_date)
         try:
             with self._get_connection() as conn:
@@ -780,7 +804,7 @@ class Storage:
         """Stores each provider's route/date quote for price-matrix analysis."""
         if not flight:
             return
-        now = datetime.now()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         arrival_time = _coerce_arrival_time(flight.arrival_time, flight.outbound_date)
         try:
             with self._get_connection() as conn:
@@ -809,7 +833,7 @@ class Storage:
         """Stores a one-way leg, even when no complete meetup exists yet."""
         if not flight:
             return
-        now = datetime.now()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         arrival_time = _coerce_arrival_time(flight.arrival_time, flight.outbound_date)
         try:
             with self._get_connection() as conn:
@@ -1266,7 +1290,7 @@ class Storage:
     def save_group_result(self, search_id: str, result) -> None:
         """Save a GroupMeetupResult to the database."""
         import json
-        now = datetime.now()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -1305,15 +1329,19 @@ class Storage:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE results SET
+                    timestamp = ?,
                     participants_json = ?,
                     a_origin = ?, a_price = ?, b_origin = ?, b_price = ?,
                     total_price = ?, a_stops = ?, b_stops = ?,
                     arrival_gap_hours = ?, source = ?, is_approximate = ?,
                     fairness_penalty = ?, grand_total = ?, transfer_cost = ?,
                     bag_cost = ?, flight_airlines = ?, flight_numbers = ?,
-                    confidence_label = ?, nights = ?
+                    confidence_label = ?, deal_percentile = ?,
+                    scan_id = COALESCE(NULLIF(?, ''), scan_id),
+                    nights = ?
                 WHERE id = ?
             """, (
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 json.dumps([p.to_dict() for p in result.participants]),
                 result.a_origin, result.a_price, result.b_origin, result.b_price,
                 result.total_price, result.a_stops, result.b_stops,
@@ -1322,7 +1350,10 @@ class Storage:
                 result.fairness_penalty, result.grand_total,
                 result.transfer_cost, result.bag_cost,
                 result.flight_airlines, result.flight_numbers,
-                result.confidence_label, result.nights,
+                result.confidence_label,
+                getattr(result, 'deal_percentile', 0),
+                getattr(result, 'scan_id', ''),
+                result.nights,
                 result_id,
             ))
             conn.commit()
@@ -1350,7 +1381,11 @@ class Storage:
                        arrival_gap_hours, source, is_approximate, search_id
                 FROM results
                 WHERE search_id = ?
-                ORDER BY (COALESCE(grand_total, total_price) + COALESCE(fairness_penalty, 0)) ASC
+                ORDER BY (
+                    CASE WHEN grand_total IS NOT NULL AND grand_total > 0
+                         THEN grand_total ELSE total_price END
+                    + COALESCE(fairness_penalty, 0)
+                ) ASC
             """, (search_id,))
             rows = cursor.fetchall()
             results = []

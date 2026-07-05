@@ -142,11 +142,21 @@ def is_sane_price(price: float, destination: str, storage=None) -> Tuple[bool, s
             with storage._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT AVG(total_price)
-                    FROM results
-                    WHERE destination = ?
-                      AND timestamp > datetime('now', '-90 days')
-                """, (destination,))
+                    SELECT AVG(price)
+                    FROM (
+                        SELECT a_price AS price
+                        FROM results
+                        WHERE destination = ?
+                          AND a_price > 0
+                          AND timestamp > datetime('now', '-90 days')
+                        UNION ALL
+                        SELECT b_price AS price
+                        FROM results
+                        WHERE destination = ?
+                          AND b_price > 0
+                          AND timestamp > datetime('now', '-90 days')
+                    )
+                """, (destination, destination))
                 row = cursor.fetchone()
                 if row and row[0] and row[0] > 10:
                     avg = float(row[0])

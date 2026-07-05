@@ -284,6 +284,10 @@ def score_group_meetup(
             nights = computed_nights
     except ValueError:
         pass
+    # A trip can never be negative nights (bad/empty dates would flow through
+    # to the UI and cost math otherwise).
+    if nights < 0:
+        nights = 0
 
     # ── sanity-band check on every flight ──
     for f in flights:
@@ -300,18 +304,22 @@ def score_group_meetup(
     all_flight_nums = []
     all_sources = set()
 
+    # Destination-side transfer is the same city for everyone, but each person
+    # still pays it, so it is added once per participant (see total_transfer).
+    dest_transfer_each = get_transfer_cost(dest)[0] if include_transfers else 0.0
+
     for i, f in enumerate(flights):
         label = (participant_labels[i] if participant_labels and i < len(participant_labels)
                  else f"Person {i+1}")
 
-        # Transfer: origin airport → city (one-way for this person)
+        # Transfer: this person's origin airport -> city, plus the destination
+        # airport -> city that everyone pays on arrival.
         if include_transfers:
             person_transfer, _method = get_transfer_cost(f.origin)
-            total_transfer += person_transfer
-            dest_transfer, _ = get_transfer_cost(dest)
         else:
             person_transfer = 0.0
-            dest_transfer = 0.0
+        dest_transfer = dest_transfer_each
+        total_transfer += person_transfer + dest_transfer
 
         # v6.1: Bag cost based on luggage preference
         if luggage == "none":
@@ -354,15 +362,11 @@ def score_group_meetup(
             is_approximate=f.is_approximate,
         ))
 
-    # ── destination transfer × N people ──
-    # Already added per-person above (person_transfer + dest_transfer)
-
     grand_total = round(total_flight + total_transfer + total_bag, 2)
 
     # ── N-way fairness penalty ──
     prices = [f.price for f in flights]
     max_diff = max(prices) - min(prices)
-    avg_price = total_flight / len(flights)
 
     if max_diff > 100:
         fairness_penalty = max_diff * 0.8
@@ -371,10 +375,13 @@ def score_group_meetup(
     else:
         fairness_penalty = max_diff * 0.2
 
-    # ── arrival gap (max gap between any two arrivals, timezone-corrected) ──
+    # ── arrival gap (max gap between any two arrivals) ──
+    # Everyone lands at the SAME destination, so all arrival clocks share the
+    # destination's timezone. Pair each arrival with `dest` (not the origin) so
+    # the offsets cancel and the gap is a correct wall-clock difference.
     from src.core.timezone_utils import compute_arrival_spread
-    arrival_pairs = [(f.arrival_time, f.origin) for f in flights if f.arrival_time]
-    max_gap, tz_warning = compute_arrival_spread(arrival_pairs)
+    arrival_pairs = [(f.arrival_time, dest) for f in flights if f.arrival_time]
+    max_gap, _tz_warning = compute_arrival_spread(arrival_pairs)
 
     # ── destination info ──
     dest_info = next((a for a in CANDIDATE_DESTINATIONS if a.iata == dest), None)

@@ -95,24 +95,6 @@ def _require_known_route(origin: str, destination: str) -> None:
         )
 
 
-@app.get("/")
-def root() -> Dict[str, Any]:
-    return {
-        "ok": True,
-        "service": "Flight Optimizer Local API",
-        "endpoints": [
-            "/health",
-            "/search",
-            "/leg",
-            "/matrix",
-            "/scrape/health",
-            "/scrape/leg",
-            "/scrape/search",
-            "/scrape/matrix",
-        ],
-    }
-
-
 @app.get("/health")
 def health() -> Dict[str, Any]:
     provider_rows = []

@@ -76,6 +76,11 @@ For a requested date pair, the engine can try:
 Every variant must still satisfy the request's `min_nights` and `max_nights`.
 That prevents flexible date shifts from leaking 1-night or too-long trips.
 
+`SEARCH_DATE_VARIANT_MODE=auto` keeps capped searches broad: while
+`MAX_API_CALLS_PER_RUN` is positive, the bot sweeps exact date pairs first so it
+can cover more cities. When `MAX_API_CALLS_PER_RUN=0`, auto switches to the full
+exact-plus-flexible brute-force mode.
+
 ## Provider Waterfall
 
 `get_best_flight()` checks cache, fans out healthy providers in a shared

@@ -73,10 +73,17 @@ def recommend_meetup(deals: List[dict], group_name: str = "",
         city = r.get("dest_city") or (_iata_meta.get(dest).city
                                       if dest in _iata_meta else dest)
         parts = r.get("participants", []) or []
-        prices = [float(p.get("price", 0) or 0) for p in parts]
-        spread = (max(prices) - min(prices)) if prices else 0
-        per = ", ".join(f"{p.get('label', '?')} €{float(p.get('price', 0) or 0):.0f}"
-                        for p in parts)
+        totals = [
+            float(p.get("price", 0) or 0)
+            + float(p.get("bag_cost", 0) or 0)
+            + float(p.get("transfer_cost", 0) or 0)
+            for p in parts
+        ]
+        spread = (max(totals) - min(totals)) if totals else 0
+        per = ", ".join(
+            f"{p.get('label', '?')} EUR {total:.0f}"
+            for p, total in zip(parts, totals)
+        )
         try:
             from datetime import datetime
             n = (datetime.strptime(r.get("return_date", ""), "%Y-%m-%d")
@@ -90,7 +97,9 @@ def recommend_meetup(deals: List[dict], group_name: str = "",
         )
     digest = "\n".join(lines)
 
-    key = "rec:" + hashlib.sha1(digest.encode("utf-8")).hexdigest()
+    key = "rec:" + hashlib.sha1(
+        f"{group_name or ''}\n{digest}".encode("utf-8")
+    ).hexdigest()
     hit = _cached(key)
     if hit:
         return hit

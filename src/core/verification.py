@@ -13,8 +13,6 @@ from typing import Any, Dict, List, Optional
 from src.core.provider_factory import (
     build_guest_providers,
     build_owner_providers,
-    duffel_under_budget,
-    record_duffel_call,
 )
 from src.core.scoring import Flight, score_group_meetup
 from src.core.storage import Storage
@@ -37,14 +35,13 @@ def _search_live_one(
         if not provider.is_healthy():
             continue
         try:
-            if provider.name() == "Duffel" and not duffel_under_budget():
+            if not provider.pre_call_ok():
                 continue
 
             result = provider.search_round_trip(
                 origin, destination, out_date, out_date, ret_date, ret_date
             )
-            if provider.name() == "Duffel" and result:
-                record_duffel_call()
+            provider.record_call()
 
             if not result or result.price <= 0:
                 continue
@@ -57,7 +54,7 @@ def _search_live_one(
                 result,
                 "live_verify",
                 is_live=True,
-                is_bookable=provider.name() == "Duffel",
+                is_bookable=provider.capabilities.bookable,
             )
             if best is None or result.price < best.price:
                 best = result

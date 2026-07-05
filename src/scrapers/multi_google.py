@@ -16,12 +16,13 @@ Norwegian, easyJet) which had no public API access.
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from fast_flights import FlightQuery, Passengers, create_query, get_flights
+from fast_flights import FlightQuery, Passengers, create_query
 from fast_flights.exceptions import FlightsNotFound
 
 from src.core.scoring import Flight
 from src.core.logger import log_info, log_error
 from src.scrapers.base import BaseScraper
+from src.clients.google_scraper import _get_flights_bounded
 
 
 class MultiModeGoogleScraper(BaseScraper):
@@ -50,41 +51,6 @@ class MultiModeGoogleScraper(BaseScraper):
             except Exception:
                 pass
         all_flights.sort(key=lambda f: f.price)
-        return all_flights
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def search_one_way(
-        self, origin: str, destination: str, date: str
-    ) -> List[Flight]:
-        """Run all modes, merge and deduplicate results."""
-        all_flights: List[Flight] = []
-        seen = set()
-
-        for mode_name, mode_fn in [
-            ("direct", self._search_direct),
-            ("all", self._search_all),
-        ]:
-            try:
-                results = mode_fn(origin, destination, date)
-                for f in results:
-                    key = (f.price, f.stops)
-                    if key not in seen:
-                        seen.add(key)
-                        f.source = f"google_{mode_name}"
-                        all_flights.append(f)
-            except Exception as exc:
-                log_error(f"[Google {mode_name}] {origin}->{destination}: {exc}")
-
-        all_flights.sort(key=lambda f: f.price)
-        if all_flights and self.debug:
-            log_info(
-                f"[Google MM] {origin}->{destination} {date}: "
-                f"{len(all_flights)} fares across modes, "
-                f"best EUR{all_flights[0].price:.0f}"
-            )
         return all_flights
 
     def search_round_trip(
@@ -190,7 +156,7 @@ class MultiModeGoogleScraper(BaseScraper):
                 max_stops=max_stops,
             )
 
-            results = get_flights(query)
+            results = _get_flights_bounded(query, origin, destination)
             if not results:
                 return []
 

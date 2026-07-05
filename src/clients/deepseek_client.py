@@ -62,8 +62,8 @@ class DeepSeekClient:
                 log_error(f"DeepSeek HTTP {resp.status_code}: {resp.text[:200]}")
                 return None
             data = resp.json()
-            text = (data.get("choices") or [{}])[0].get(
-                "message", {}).get("content", "").strip()
+            message = (data.get("choices") or [{}])[0].get("message") or {}
+            text = (message.get("content") or "").strip()
             return text or None
         except Exception as exc:
             log_error(f"DeepSeek call failed: {exc}")

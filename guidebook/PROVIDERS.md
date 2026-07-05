@@ -8,72 +8,66 @@ Last updated: 2026-07-05
 providers exist, what each is good at, and which search tier it serves. Every
 provider declares `CAPABILITIES` (a `ProviderCapabilities`): `airline`,
 `region`, `cost`, `freshness`, `bookable`, `has_calendar`, `has_one_way`, and
-`tiers`. The search engine routes work by capability - never by provider-name
-strings.
+`tiers`. The search engine routes work by capability, not provider-name strings.
 
 Two tiers express the discovery/verification split:
 
 | Tier | Job | Freshness | Providers |
 |---|---|---|---|
-| `DISCOVERY` | Broad, cheap "which cities/dates are worth looking at?" | May be slightly stale | Ryanair, Ryanair Calendar, Google, Google Multi-Mode |
-| `VERIFICATION` | Narrow, live "is THIS deal real right now?" | Must be live/bookable | Ryanair, Google, Google Multi-Mode, Duffel |
+| `DISCOVERY` | Broad, cheap "which cities/dates are worth looking at?" | May be cached or approximate | Ryanair, Ryanair Calendar, Google, Google Multi-Mode, Travelpayouts when configured |
+| `VERIFICATION` | Narrow, exact-date "is THIS deal real right now?" | Live where possible, clearly labelled when cached/approximate | Ryanair, Google, Google Multi-Mode, Travelpayouts when configured, Amadeus when configured, Duffel when enabled |
 
-Adding a source is one `ProviderSpec` in the registry - no edits to `main.py` or
-the search engine. Build helpers: `build_verification_providers()` (today's
-default exact-date set), `build_discovery_providers()` (free calendar-capable
-set, paid providers always excluded).
+Adding a source is one `ProviderSpec` in the registry. Build helpers:
+`build_verification_providers()` (today's exact-date set),
+`build_discovery_providers()` (free discovery set), `build_guest_providers()`
+(free-only), and `build_owner_providers()` (may include Duffel).
 
-Metered (paid) providers gate themselves via `pre_call_ok()` / `record_call()`
-on the provider base class, so budget logic no longer lives as name-string
-checks inside `get_best_flight`.
+Metered providers gate themselves via `pre_call_ok()` / `record_call()`. Duffel
+reserves a daily-budget slot before a paid request is issued, and the counter is
+lock-protected so concurrent searches cannot overspend the configured cap.
 
 ## Active Providers
 
 | Provider class | Source | Cost | Tiers | Used for |
 |---|---|---|---|---|
 | `RyanairProvider` | Ryanair public JSON endpoints | Free | Both | Direct LCC prices, one-way legs, exact-date round trips |
-| `RyanairCalendarProvider` | Ryanair `cheapestPerDay` calendar | Free | Discovery | Whole-month fare surface in ~1 call/route (approximate) |
-| `GoogleScraperProvider` | `fast-flights` Google Flights Protobuf | Free | Both | Broad airline coverage (aggregator breadth) |
-| `MultiGoogleScraperProvider` | Google Flights queried in direct/all/calendar modes | Free | Both | Wider search coverage and backup signal |
-| `TravelpayoutsProvider` | Travelpayouts / Aviasales Data API | Free (keyed) | Both | Cached fares over a real API; works from a server IP where scraping is blocked; enabled once `TRAVELPAYOUTS_TOKEN` is set |
-| `DuffelProvider` | Duffel GDS API | Paid | Verification | Independent bookable GDS offers and confidence |
+| `RyanairCalendarProvider` | Ryanair `cheapestPerDay` calendar | Free | Discovery | Whole-month fare surface in about one call per route; approximate |
+| `GoogleScraperProvider` | `fast-flights` Google Flights Protobuf | Free | Both | Broad airline coverage; requests force EUR and are timeout-bounded |
+| `MultiGoogleScraperProvider` | Google Flights direct/all modes via `fast-flights` | Free | Both | Wider search coverage and backup signal, with cache/rate limiting |
+| `TravelpayoutsProvider` | Travelpayouts / Aviasales Data API | Free keyed | Both | Cached fares over a real API; useful on server IPs where scraping is blocked |
+| `AmadeusProvider` | Amadeus Self-Service API | Free/test keyed | Verification | Independent GDS offers when `AMADEUS_CLIENT_ID` and secret are configured |
+| `DuffelProvider` | Duffel GDS API | Paid | Verification | Independent bookable GDS offers, budget-gated |
 
-> Note: Amadeus is no longer listed as a free option. Amadeus discontinued its
-> free Self-Service test tier, so it is not a viable no-cost source anymore.
-
-## Direct-Airline Coverage Reality (probed 2026-07-05)
+## Direct-Airline Coverage Reality
 
 Direct airline readers were probed for key-free availability. Only Ryanair's
-public API answers cleanly (calendar, route graph `/api/views/locate/.../routes`,
-active-airports list - all HTTP 200 JSON). The rest are walled and would need
-CAPTCHA/proxy evasion, which is out of scope:
+public API answers cleanly (calendar, route graph, active-airports list). The
+rest are walled and would need official APIs, keys, or scraping infrastructure
+that is out of scope:
 
 | Carrier / source | Result |
 |---|---|
-| Ryanair | Open - calendar, routes, airports all 200 JSON |
-| Wizz Air | 403 (Cloudflare) |
-| easyJet | 403 Access Denied (Akamai) |
-| Vueling | Host not resolvable / walled |
-| Transavia | 500 (needs official API key) |
-| Kiwi (skypicker) | 404 (endpoint deprecated; Tequila needs a key) |
+| Ryanair | Open - calendar, routes, airports all return JSON |
+| Wizz Air | 403 / Cloudflare |
+| easyJet | 403 Access Denied / Akamai |
+| Vueling | Walled or unreliable direct host |
+| Transavia | Requires official API access |
+| Kiwi | Old skypicker endpoint deprecated; Tequila needs a key |
 
-Consequence: every non-Ryanair airline's **fares** reach us via the Google
-aggregator, not via direct readers. For more coverage the sanctioned path is a
-commercial flight-data API (see the registry - adding a source is a one-entry
-change). Amadeus used to be the free option here, but it has discontinued its
-free test tier, so it is no longer recommended.
+Consequence: most non-Ryanair fares arrive through Google, Travelpayouts,
+Amadeus, or Duffel rather than direct airline scrapers.
 
 ## Duffel Safety
 
-Duffel is paid, so v6 added a safety layer:
+Duffel is paid, so the app protects the owner's wallet:
 
-- Guest searches use `build_guest_providers()` and do not include Duffel.
+- Guest searches use `build_guest_providers()` and never include paid providers.
 - Owner searches may use Duffel through `build_providers()` / `build_owner_providers()`.
 - Duffel is only added when `DUFFEL_TOKEN` is set and `DUFFEL_DAILY_BUDGET` remains.
-- Budget helpers track calls per local day: `duffel_budget_remaining`,
+- Budget helpers track local-day usage: `duffel_budget_remaining`,
   `duffel_budget_used_today`, `record_duffel_call`, and `duffel_budget_ok`.
 
-Set `DUFFEL_DAILY_BUDGET=0` to effectively disable Duffel.
+Set `DUFFEL_DAILY_BUDGET=0` to disable Duffel.
 
 ## Health And Reliability
 
@@ -84,14 +78,16 @@ All providers inherit from `FlightProvider`, which supplies:
 - health status/reason fields,
 - retry/backoff wrapper hooks.
 
-`provider_factory.py` adds a 15-minute health cache so Telegram commands do not
-perform live HTTP checks every time.
+Provider instances cache health checks for 15 minutes. Google scraper calls are
+bounded so a stalled Google connection does not block a search forever, and a
+malformed Google fare now skips only that fare rather than discarding the whole
+route.
 
 ## Provider Consensus
 
 The ranking system prefers confirmed prices. Quotes are deduplicated by airline
-and near-identical price before being counted, so Google showing the same
-Ryanair fare is not treated as an independent second source.
+and near-identical price before being counted, so Google relaying the same fare
+is not treated as an independent second source.
 
 Confidence labels:
 
@@ -99,7 +95,7 @@ Confidence labels:
 |---|---|
 | `HIGH` | Multiple independent sources agree closely |
 | `MEDIUM` | Multiple sources exist but disagree more |
-| `SINGLE` / `SINGLE_SOURCE` | One source only; verify before booking |
+| `SINGLE_SOURCE` | One source only; verify before booking |
 | `LOW` | Weak/stale/fallback signal |
 
 ## Luggage Costing
@@ -119,23 +115,18 @@ Known examples:
 | Eurowings | EW | EUR 16 |
 | Lufthansa / Air France / KLM / BA | LH / AF / KL / BA | EUR 0 assumed included |
 
-The bot also exposes `none` and `checked_23kg` modes through the luggage
-question in the search setup.
+The bot also exposes `none` and `checked_23kg` luggage modes.
 
 ## Transfer Costing
 
-`cost_utils.py` contains transfer costs for many airports and renders
-human-readable airport-to-city method/cost details. Search requests can include
-or exclude transfers.
-
-Destination transfer costs are multiplied by the number of travelers because
-everyone needs destination airport-city transport.
+`cost_utils.py` contains transfer costs for many airports. Search requests can
+include or exclude transfers. Origin transfers are counted per participant and
+destination transfers are multiplied by the number of travellers, because every
+traveller needs destination airport-city transport.
 
 ## Removed Or Inactive Providers
 
 Several providers from earlier iterations are no longer active: SerpApi,
-RapidAPI/Kiwi, Aviationstack, SearchAPI, and dead airline scrapers. Amadeus was
-also dropped after it discontinued its free test tier. They are not part of the
-live provider list unless explicitly re-enabled in code. Travelpayouts, which
-used to be in this list, has been brought back as an active free provider (see
-the table above) because it is a real API that works from a server IP.
+RapidAPI/Kiwi, Aviationstack, SearchAPI, and dead direct-airline scrapers.
+Travelpayouts and Amadeus are active only when their keys are configured. Duffel
+is active only for owner/paid searches when token and budget allow it.

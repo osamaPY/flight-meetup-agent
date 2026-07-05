@@ -24,6 +24,7 @@ Pure rendering helpers live in src/core/bot_ui.py (offline-tested).
 import asyncio
 import logging
 import os
+import threading
 import re
 import sys
 import time
@@ -51,7 +52,7 @@ from src.core.provider_factory import build_guest_providers, build_providers
 from src.core.search_request import ParticipantGroup, SearchRequest
 from src.core.storage import Storage
 from src.core.verification import fare_intelligence, verify_result
-from main import SEARCH_STOP_EVENT, booking_mode
+from main import booking_mode
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -98,7 +99,7 @@ def _ensure_user(u):
 
 
 def _gate():
-    return os.getenv("REQUIRE_INVITE_CODE", "0") == "1"
+    return Config.REQUIRE_INVITE_CODE
 
 
 def _allowed(u):
@@ -735,7 +736,10 @@ async def launch_search(update, context, gid, cfg=None):
 
     context.bot_data[f"sa_{gid}"] = True
     context.bot_data[f"st_{gid}"] = datetime.now()
-    SEARCH_STOP_EVENT.clear()
+    # Per-group cancellation token, so this group's Stop never touches another
+    # group's concurrent search (the old single global event did).
+    stop_ev = threading.Event()
+    context.bot_data[f"stopev_{gid}"] = stop_ev
 
     loop = asyncio.get_running_loop()
     started = time.time()
@@ -769,6 +773,8 @@ async def launch_search(update, context, gid, cfg=None):
             current=cur, total=tot)
 
         async def _edit():
+            if msg is None:
+                return
             try:
                 await msg.edit_text(text, parse_mode='HTML',
                                     reply_markup=_kb(stop_rows))
@@ -782,14 +788,22 @@ async def launch_search(update, context, gid, cfg=None):
         try:
             summary = await asyncio.to_thread(
                 booking_mode, s, notifier, providers,
-                progress_callback=prog_cb, search_request=req)
+                progress_callback=prog_cb, search_request=req,
+                should_stop=stop_ev.is_set)
             secs = int(time.time() - started)
             cities = {getattr(r, 'dest_city', '') or r.destination
                       for r in summary.results}
             devlog.event("bot_search_done", search_id=sid, gid=gid,
                          results=len(summary.results), cities=len(cities),
-                         seconds=secs, stopped=summary.stopped)
-            stopped = " (stopped early)" if summary.stopped else ""
+                         seconds=secs, stopped=summary.stopped,
+                         stop_reason=getattr(summary, "stop_reason", ""))
+            reason = getattr(summary, "stop_reason", "")
+            if reason == "api_call_cap":
+                stopped = " (safety cap reached)"
+            elif summary.stopped:
+                stopped = " (stopped early)"
+            else:
+                stopped = ""
 
             done = (
                 f"✅ <b>Search done{stopped} - {esc(group_name)}</b>\n\n"
@@ -798,9 +812,15 @@ async def launch_search(update, context, gid, cfg=None):
                 f"Everyone in the group has been notified."
             )
             try:
-                await msg.edit_text(done, parse_mode='HTML', reply_markup=_kb(
-                    [[_btn("🏆 View results", f"res_{gid}")],
-                     [_btn("⬅️ Group", f"hub_{gid}"), HOME_BTN]]))
+                if msg is not None:
+                    await msg.edit_text(
+                        done,
+                        parse_mode='HTML',
+                        reply_markup=_kb([
+                            [_btn("View results", f"res_{gid}")],
+                            [_btn("Group", f"hub_{gid}"), HOME_BTN],
+                        ]),
+                    )
             except BadRequest:
                 pass
 
@@ -823,16 +843,35 @@ async def launch_search(update, context, gid, cfg=None):
             devlog.event("bot_search_error", search_id=sid, gid=gid,
                          error=str(e)[:300])
             try:
-                await msg.edit_text(
-                    f"❌ Search failed: {esc(str(e)[:200])}",
-                    parse_mode='HTML',
-                    reply_markup=_kb([[_btn("⬅️ Group", f"hub_{gid}")]]))
+                s.update_search_status(sid, 'failed')
+            except Exception:
+                pass
+            fail_text = f"Search failed: {esc(str(e)[:200])}"
+            try:
+                if msg is not None:
+                    await msg.edit_text(
+                        fail_text,
+                        parse_mode='HTML',
+                        reply_markup=_kb([[_btn("Group", f"hub_{gid}")]]),
+                    )
+                else:
+                    await update.effective_message.reply_text(
+                        fail_text,
+                        parse_mode='HTML',
+                        reply_markup=_kb([[_btn("Group", f"hub_{gid}")]]),
+                    )
             except BadRequest:
+                pass
+        else:
+            # Only a run that did not raise is 'completed'.
+            try:
+                s.update_search_status(sid, 'completed')
+            except Exception:
                 pass
         finally:
             context.bot_data[f"sa_{gid}"] = False
+            context.bot_data.pop(f"stopev_{gid}", None)
             _reset_cfg_done(context, gid)
-            s.update_search_status(sid, 'completed')
 
     asyncio.create_task(run())
 
@@ -1402,7 +1441,11 @@ async def _start_join(update, context, code):
     if _tid(update) in {m['telegram_id'] for m in members}:
         await scr_hub(update, context, g['id'])
         return
-    names = ", ".join(esc(m['username']) for m in members)
+    names = ", ".join(
+        esc(m.get('label') or m.get('display_name') or m.get('first_name')
+            or m.get('username') or 'member')
+        for m in members
+    )
     await update.effective_message.reply_text(
         f"👋 <b>You're invited to {esc(g['name'])}!</b>\n"
         f"👥 Already in: {names}\n",
@@ -1442,7 +1485,7 @@ async def cmd_help(update, context):
 
 async def cmd_status(update, context):
     active = []
-    for k, v in (context.bot_data or {}).items():
+    for k, v in list((context.bot_data or {}).items()):
         if k.startswith("sa_") and v:
             gid = k.replace("sa_", "")
             city = context.bot_data.get(f"scity_{gid}", "…")
@@ -1457,9 +1500,18 @@ async def cmd_status(update, context):
 
 
 async def cmd_stop(update, context):
-    SEARCH_STOP_EVENT.set()
+    # /stop has no group context, so stop the searches of the caller's own
+    # groups only, via their per-group tokens (never a process-wide flag).
+    me = _tid(update)
+    stopped = 0
+    for g in Storage().list_user_groups(me):
+        ev = context.bot_data.get(f"stopev_{g['id']}")
+        if ev:
+            ev.set()
+            stopped += 1
     await update.effective_message.reply_text(
-        "🛑 Stopping - results found so far are saved.")
+        "🛑 Stopping - results found so far are saved." if stopped
+        else "😴 No search of yours is running.")
 
 
 async def cmd_health(update, context):
@@ -1673,7 +1725,10 @@ async def on_callback(update, context):
         parts = d.split("_")
         await cb_panel_set(update, context, parts[1], parts[2], parts[3:])
     elif d.startswith("stop_"):
-        SEARCH_STOP_EVENT.set()
+        # Stop only this group's search via its own token.
+        ev = context.bot_data.get(f"stopev_{d[5:]}")
+        if ev:
+            ev.set()
         # Immediate visual feedback; the worker wraps up and the completion
         # card then replaces this with the "stopped early" summary.
         try:

@@ -41,7 +41,31 @@ cp .env.example .env
 python telegram_bot.py
 ```
 
-You need a `TELEGRAM_BOT_TOKEN` (from [@BotFather](https://t.me/BotFather)) and your own `TELEGRAM_CHAT_ID` in `.env`. The rest is optional: `DEEPSEEK_API_KEY` turns on the AI features, `DUFFEL_TOKEN` adds a paid GDS source. Without either, it still runs fine on the free Ryanair and Google data.
+You need a `TELEGRAM_BOT_TOKEN` (from [@BotFather](https://t.me/BotFather)) and your own `TELEGRAM_CHAT_ID` in `.env`. The rest is optional: `DEEPSEEK_API_KEY` turns on the AI features, `TRAVELPAYOUTS_TOKEN` adds a server-friendly free flight-data API, Amadeus keys add an optional GDS source, and `DUFFEL_TOKEN` adds a paid GDS source. Without those, it still runs on the free Ryanair and Google data.
+
+## Customizing It
+
+The repo is meant to be forkable. You can change the default people, origin
+airports, search window, trip length, luggage, transfer inclusion, direct-only
+mode, destination scope, and search depth from `.env` without editing Python.
+Telegram groups can still override those defaults in chat, so my personal
+Milan/Riga workflow and a public portfolio fork use the same code path.
+
+Common knobs:
+
+```env
+DEFAULT_ORIGINS_A=BGY,MXP,LIN
+DEFAULT_ORIGINS_B=RIX
+DEFAULT_SEARCH_START_OFFSET_DAYS=14
+DEFAULT_SEARCH_END_OFFSET_DAYS=42
+DEFAULT_MIN_NIGHTS=2
+DEFAULT_MAX_NIGHTS=4
+DEFAULT_LUGGAGE=carryon_10kg
+DEFAULT_INCLUDE_TRANSFERS=1
+DEFAULT_DESTINATION_UNIVERSE=europe
+MAX_API_CALLS_PER_RUN=5000
+SEARCH_DATE_VARIANT_MODE=auto
+```
 
 ```bash
 python -m pytest -q         # tests, no network needed
@@ -53,7 +77,7 @@ To run it 24/7 on a server (AWS free-tier or any Linux VPS), there's a one-comma
 
 ## How it's built
 
-The stack is Python: `python-telegram-bot` for the bot, SQLite (WAL) for storage, `fast-flights` for Google Flights data, Ryanair's public API, Travelpayouts (a free flight-data API that keeps working from a server IP), an optional Duffel GDS source, DeepSeek for the LLM bits, and a small FastAPI server on the side for debugging.
+The stack is Python: `python-telegram-bot` for the bot, SQLite (WAL) for storage, `fast-flights` for Google Flights data, Ryanair's public API, Travelpayouts and Amadeus when keys are configured, an optional paid Duffel GDS source, DeepSeek for the LLM bits, and a small FastAPI server on the side for debugging.
 
 A few decisions worth explaining:
 
@@ -67,7 +91,7 @@ A few decisions worth explaining:
 
 **The AI is kept on a short leash.** The recommendation is given only the numbers already computed and told not to invent fares - it's choosing between real options, not making up prices. There's also an "Ask a question" helper so a non-technical user can type something like "how do I add my friend?" and get a plain answer. Every AI call is optional and fails quietly, so the bot never breaks if DeepSeek is down or no key is set.
 
-There are 65 tests that run offline (no network, no API key) covering the registry, the route-graph fallback behaviour, the discovery scan, the bot's rendering helpers, manual-member handling, the Travelpayouts client, and the AI prompt-building with a mocked client. They run in CI on every push.
+There are 71 tests that run offline (no network, no API key) covering the registry, route-graph fallback behaviour, discovery scan, bot rendering helpers, manual-member handling, recheck/update flows, Travelpayouts, Amadeus parsing, and AI prompt-building with a mocked client. They run in CI on every push.
 
 Full docs are in [guidebook/](guidebook/): [setup](guidebook/SETUP.md), [architecture](guidebook/ARCHITECTURE.md), [providers](guidebook/PROVIDERS.md), [search layers](guidebook/SMART_LAYERS.md), a [codebase tour](guidebook/CODEBASE_GUIDE.md), and [troubleshooting](guidebook/TROUBLESHOOTING.md). To run it 24/7 on a server, see [deploy/](deploy/README.md).
 
@@ -78,7 +102,7 @@ telegram_bot.py            the bot (main thing people use)
 main.py                    search engine + CLI
 flight_api_server.py       FastAPI server
 src/core/                  registry, search, scoring, route graph, AI, storage, UI helpers
-src/clients/               ryanair, google, duffel, deepseek
+src/clients/               ryanair, google, travelpayouts, amadeus, duffel, deepseek, weather
 scripts/                   nightly price surface, canary, backups, dashboard
 tests/                     offline tests
 guidebook/                 setup and architecture docs
@@ -86,7 +110,7 @@ guidebook/                 setup and architecture docs
 
 ## A few honest caveats
 
-It only covers European destinations for now. It reads public and consenting endpoints - Ryanair's open API, Google Flights via `fast-flights`, optionally Duffel - and deliberately doesn't scrape the airlines that wall themselves off, so most non-Ryanair fares come through Google rather than a direct source. Prices move constantly, so always confirm on the airline's own checkout before booking. It's a personal project, not affiliated with any airline.
+It only covers European destinations for now. It reads public and consenting endpoints - Ryanair's open API, Google Flights via `fast-flights`, Travelpayouts or Amadeus when configured, optionally Duffel - and deliberately doesn't scrape the airlines that wall themselves off, so most non-Ryanair fares come through Google rather than a direct source. Prices move constantly, so always confirm on the airline's own checkout before booking. It's a personal project, not affiliated with any airline.
 
 ## License
 

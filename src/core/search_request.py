@@ -110,10 +110,16 @@ class SearchRequest:
         if not self.depart_earliest or not self.depart_latest:
             return []
 
-        windows = []
-        start = datetime.strptime(self.depart_earliest, "%Y-%m-%d")
-        end = datetime.strptime(self.depart_latest, "%Y-%m-%d")
+        try:
+            start = datetime.strptime(self.depart_earliest, "%Y-%m-%d")
+            end = datetime.strptime(self.depart_latest, "%Y-%m-%d")
+        except ValueError:
+            return []
+        if start > end:
+            start, end = end, start
+        min_nights, max_nights = sorted((int(self.min_nights), int(self.max_nights)))
 
+        windows = []
         current = start
         while current <= end:
             chunk_end = current + timedelta(days=6)
@@ -122,8 +128,8 @@ class SearchRequest:
             windows.append({
                 "depart_earliest": current.strftime("%Y-%m-%d"),
                 "depart_latest": chunk_end.strftime("%Y-%m-%d"),
-                "min_nights": self.min_nights,
-                "max_nights": self.max_nights,
+                "min_nights": min_nights,
+                "max_nights": max_nights,
             })
             current = chunk_end + timedelta(days=1)
 
@@ -151,15 +157,31 @@ class SearchRequest:
 
     @classmethod
     def default_two_person(cls) -> "SearchRequest":
-        """The original Milan+Riga summer holiday search (backward compatible)."""
+        """Default two-person search, driven by .env customization knobs."""
+        from datetime import datetime, timedelta
+        from src.core.config import Config
+
+        today = datetime.now()
+        start = today + timedelta(days=Config.DEFAULT_SEARCH_START_OFFSET_DAYS)
+        end = today + timedelta(days=Config.DEFAULT_SEARCH_END_OFFSET_DAYS)
         return cls(
             participants=[
-                ParticipantGroup("🅰️ You", ["BGY", "MXP", "LIN"]),
-                ParticipantGroup("🅱️ Friend", ["RIX"]),
+                ParticipantGroup(
+                    Config.DEFAULT_PARTICIPANT_A_LABEL,
+                    Config.DEFAULT_ORIGINS_A,
+                ),
+                ParticipantGroup(
+                    Config.DEFAULT_PARTICIPANT_B_LABEL,
+                    Config.DEFAULT_ORIGINS_B,
+                ),
             ],
-            depart_earliest="2026-07-15",
-            depart_latest="2026-08-12",
-            min_nights=2,
-            max_nights=4,
-            destination_universe="europe",
+            depart_earliest=start.strftime("%Y-%m-%d"),
+            depart_latest=end.strftime("%Y-%m-%d"),
+            min_nights=Config.DEFAULT_MIN_NIGHTS,
+            max_nights=Config.DEFAULT_MAX_NIGHTS,
+            destination_universe=Config.DEFAULT_DESTINATION_UNIVERSE,
+            luggage=Config.DEFAULT_LUGGAGE,
+            include_transfers=Config.DEFAULT_INCLUDE_TRANSFERS,
+            direct_only=Config.DEFAULT_DIRECT_ONLY,
+            max_stops=Config.DEFAULT_MAX_STOPS,
         )

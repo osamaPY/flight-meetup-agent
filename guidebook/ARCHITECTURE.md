@@ -2,7 +2,7 @@
 
 Current snapshot: v7 Telegram UX with a DeepSeek AI concierge, a
 capability-tagged provider registry with discovery/verification tiers,
-parameterized `SearchRequest`, ~46 Python files, ~10,900 Python lines.
+parameterized `SearchRequest`, 52 Python files, about 12,700 Python lines.
 
 Last updated: 2026-07-05
 
@@ -98,18 +98,21 @@ an airline provably does not fly (fail-open). See [SMART_LAYERS.md](SMART_LAYERS
 ## Providers
 
 Providers are described by capability tags in `provider_registry.py` and split
-across two tiers (discovery = broad/cheap, verification = live/bookable). Active
-provider classes:
+across two tiers: discovery is broad and cheap, verification is exact-date and
+as live as the configured sources allow. Active provider classes:
 
 - `RyanairProvider` (both tiers)
 - `RyanairCalendarProvider` (discovery only, month-level calendar surface)
 - `GoogleScraperProvider` (both tiers)
 - `MultiGoogleScraperProvider` (both tiers)
-- `DuffelProvider` (verification only, paid)
+- `TravelpayoutsProvider` (both tiers when `TRAVELPAYOUTS_TOKEN` is set; cached API fares)
+- `AmadeusProvider` (verification when Amadeus keys are set)
+- `DuffelProvider` (verification only, paid and budget-gated)
 
 Each provider declares `CAPABILITIES` (airline, region, cost, freshness,
 bookable, has_calendar, tiers). The engine routes by capability, not by name,
 and metered providers gate themselves via `pre_call_ok()` / `record_call()`.
+Duffel reserves a budget slot before issuing a paid request.
 
 `provider_registry.py` / `provider_factory.py` expose:
 
@@ -117,7 +120,7 @@ and metered providers gate themselves via `pre_call_ok()` / `record_call()`.
 - `build_guest_providers()` for free-only guest searches
 - `build_owner_providers()` for owner searches with Duffel if budget allows
 - `build_discovery_providers()` for the broad, free, calendar-capable set
-- cached health helpers and Duffel daily budget tracking
+- Duffel daily budget helpers
 
 Adding a new source is one `ProviderSpec` in the registry.
 
@@ -134,7 +137,7 @@ v7 design - "one card that navigates like an app":
   actions (my airports, manage people, leave) live behind "More".
 - The group screen leads with one clear "Find flights" button (one-tap
   smart defaults, then a confirm screen). "Pick dates / options first"
-  opens the guided 6-question setup (dates, nights, luggage, transfers,
+  opens the tap-to-change settings setup (dates, nights, luggage, transfers,
   flights, scope). Both end on the same launch card.
 - A "Ask a question" helper (DeepSeek) lets non-technical users type a
   plain question and get a simple answer; free text with no pending step
@@ -227,4 +230,4 @@ FastAPI endpoints include:
 - `SearchRequest` is the source of truth for new configurable searches.
 - Adding an airline/source is one registry entry; direct-airline scraping is
   limited to consenting endpoints (mostly Ryanair), with other fares via Google.
-- Some legacy environment variables and clients remain in code for compatibility/reference.
+- Optional providers appear only when their keys and budget gates allow them.

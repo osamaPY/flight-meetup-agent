@@ -1,8 +1,12 @@
+import concurrent.futures
 from typing import List, Optional
 from fast_flights import FlightQuery, Passengers, create_query, get_flights
 from fast_flights.exceptions import FlightsNotFound
 from src.core.scoring import Flight
 from src.core.logger import log_error
+
+GOOGLE_TIMEOUT_SECONDS = 20
+_GOOGLE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=8)
 
 
 def _format_simple_datetime(value, fallback_date: str) -> str:
@@ -13,15 +17,23 @@ def _format_simple_datetime(value, fallback_date: str) -> str:
     date_part = getattr(value, "date", None)
     time_part = getattr(value, "time", None)
 
+    date_text = fallback_date
     if isinstance(date_part, (tuple, list)) and len(date_part) >= 3:
         yyyy, mm, dd = date_part[:3]
-        date_text = f"{int(yyyy):04d}-{int(mm):02d}-{int(dd):02d}"
-    else:
-        date_text = fallback_date
+        try:
+            if yyyy is not None and mm is not None and dd is not None:
+                date_text = f"{int(yyyy):04d}-{int(mm):02d}-{int(dd):02d}"
+        except (TypeError, ValueError):
+            date_text = fallback_date
 
     if isinstance(time_part, (tuple, list)) and len(time_part) >= 2:
         hh, minute = time_part[:2]
-        time_text = f"{int(hh):02d}:{int(minute):02d}"
+        try:
+            if hh is None or minute is None:
+                return f"{date_text} 00:00"
+            time_text = f"{int(hh):02d}:{int(minute):02d}"
+        except (TypeError, ValueError):
+            return f"{date_text} 00:00"
     elif isinstance(time_part, str) and time_part:
         time_text = time_part
     else:
@@ -29,6 +41,18 @@ def _format_simple_datetime(value, fallback_date: str) -> str:
         return raw if raw and raw != "None" else f"{date_text} 00:00"
 
     return f"{date_text} {time_text}"
+
+
+def _get_flights_bounded(query, origin: str, destination: str):
+    future = _GOOGLE_EXECUTOR.submit(get_flights, query)
+    try:
+        return future.result(timeout=GOOGLE_TIMEOUT_SECONDS)
+    except concurrent.futures.TimeoutError:
+        log_error(
+            f"GoogleScraper timeout ({origin}->{destination}) "
+            f"after {GOOGLE_TIMEOUT_SECONDS}s"
+        )
+        return []
 
 
 def _coerce_price(value) -> float:
@@ -59,62 +83,70 @@ class GoogleScraperClient:
                 trip="one-way",
                 passengers=Passengers(adults=1),
                 language="en-US",
+                currency="EUR",
             )
             
-            result = get_flights(query)
+            result = _get_flights_bounded(query, origin, destination)
 
             if not result:
                 return []
 
             flights = []
             for f in result:
-                segments = getattr(f, "flights", None) or []
-                if not segments:
+                try:
+                    segments = getattr(f, "flights", None) or []
+                    if not segments:
+                        continue
+
+                    arrival_time = _format_simple_datetime(
+                        getattr(segments[-1], "arrival", None),
+                        date,
+                    )
+                    price_val = _coerce_price(getattr(f, "price", None))
+
+                    if price_val <= 0:
+                        continue
+
+                    # Extract airline + flight info from first segment
+                    first_seg = segments[0]
+                    airline = (
+                        getattr(first_seg, "airline", "")
+                        or getattr(first_seg, "airlineCode", "")
+                        or ""
+                    )
+                    flight_no = (
+                        getattr(first_seg, "flightNumber", "")
+                        or getattr(first_seg, "flight_number", "")
+                        or ""
+                    )
+                    dep_time = _format_simple_datetime(
+                        getattr(first_seg, "departure", None), date,
+                    )
+
+                    flights.append(Flight(
+                        origin=origin,
+                        destination=destination,
+                        price=float(price_val),
+                        outbound_date=date,
+                        return_date=date,
+                        stops=max(0, len(segments) - 1),
+                        arrival_time=arrival_time,
+                        departure_time=dep_time,
+                        source="google_scraper",
+                        airline=str(airline),
+                        flight_number=str(flight_no),
+                        currency="EUR",
+                        deep_link=(
+                            f"https://www.google.com/travel/flights?q="
+                            f"Flights%20from%20{origin}%20to%20{destination}%20on%20{date}"
+                        ),
+                    ))
+                except (AttributeError, IndexError, TypeError, ValueError) as exc:
+                    log_error(
+                        f"GoogleScraper skipped malformed fare "
+                        f"({origin}->{destination}): {exc}"
+                    )
                     continue
-
-                arrival_time = _format_simple_datetime(
-                    getattr(segments[-1], "arrival", None),
-                    date,
-                )
-                price_val = _coerce_price(getattr(f, "price", None))
-
-                if price_val <= 0:
-                    continue
-
-                # Extract airline + flight info from first segment
-                first_seg = segments[0]
-                airline = (
-                    getattr(first_seg, "airline", "")
-                    or getattr(first_seg, "airlineCode", "")
-                    or ""
-                )
-                flight_no = (
-                    getattr(first_seg, "flightNumber", "")
-                    or getattr(first_seg, "flight_number", "")
-                    or ""
-                )
-                dep_time = _format_simple_datetime(
-                    getattr(first_seg, "departure", None), date,
-                )
-
-                flights.append(Flight(
-                    origin=origin,
-                    destination=destination,
-                    price=float(price_val),
-                    outbound_date=date,
-                    return_date=date,
-                    stops=max(0, len(segments) - 1),
-                    arrival_time=arrival_time,
-                    departure_time=dep_time,
-                    source="google_scraper",
-                    airline=str(airline),
-                    flight_number=str(flight_no),
-                    currency="EUR",
-                    deep_link=(
-                        f"https://www.google.com/travel/flights?q="
-                        f"Flights%20from%20{origin}%20to%20{destination}%20on%20{date}"
-                    ),
-                ))
             return flights
         except FlightsNotFound:
             return []

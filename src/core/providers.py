@@ -139,9 +139,8 @@ class FlightProvider(ABC):
         for i in range(retries + 1):
             try:
                 result = search_fn(*args)
-                if result:
-                    self._consecutive_failures = 0
-                    return result
+                self._consecutive_failures = 0
+                return result
             except Exception as e:
                 self._consecutive_failures += 1
                 if self._consecutive_failures >= 3:
@@ -308,12 +307,12 @@ class DuffelProvider(FlightProvider):
     # Paid provider: gate every call on the daily budget (was a name-string
     # check inside get_best_flight; now it lives with the provider).
     def pre_call_ok(self) -> bool:
-        from src.core.provider_factory import duffel_under_budget
-        return duffel_under_budget()
+        from src.core.provider_factory import record_duffel_call
+        return record_duffel_call()
 
     def record_call(self) -> None:
-        from src.core.provider_factory import record_duffel_call
-        record_duffel_call()
+        # Budget slot is reserved before the paid request is issued.
+        return None
 
     def search_round_trip(self, origin, dest, out_from, out_to, in_from, in_to):
         try:

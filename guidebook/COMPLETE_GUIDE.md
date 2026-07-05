@@ -66,7 +66,7 @@ SearchRequest
   -> date windows
   -> candidate destinations
   -> cheapest-first ordering
-  -> date pairs and flexible variants
+  -> exact date pairs (or full flexible variants when unlimited)
   -> cheapest flight for every participant
   -> group meetup score
   -> provider confidence
@@ -81,17 +81,20 @@ flights are combined into one destination/date result.
 ## Providers
 
 Providers are declared with capability tags in a registry and split into two
-tiers: discovery (broad, cheap, calendar-first) and verification (live,
-bookable). The live set:
+tiers: discovery (broad, cheap, calendar-first) and verification (exact-date,
+live where possible, labelled when cached/approximate). The active registry set:
 
 - Ryanair (both tiers),
 - Ryanair Calendar (discovery only, whole-month fare surface),
 - Internal Google Scraper (both tiers),
 - Google Multi-Mode (both tiers),
+- Travelpayouts (both tiers, cached/free API) when `TRAVELPAYOUTS_TOKEN` is set,
+- Amadeus (verification only) when Amadeus keys are set,
 - Duffel (verification only, paid) when enabled and budget-safe.
 
 Guest searches are free-provider-only. Owner searches can use Duffel if the
-token and daily budget allow it. Adding a source is one registry entry. See
+token and daily budget allow it. Travelpayouts and Amadeus are included only
+when their keys are configured. Adding a source is one registry entry. See
 [PROVIDERS.md](PROVIDERS.md).
 
 ## Ranking
@@ -198,4 +201,4 @@ Non-owners receive an owner-only rejection.
 - Google scraping depends on `fast-flights` and can break if Google changes internals.
 - Duffel is paid and should remain budget-limited.
 - The AI concierge is optional and for guidance only; it never sets prices.
-- Some legacy env variables and clients remain in the repo but are not active providers.
+- Travelpayouts, Amadeus, and Duffel are optional and appear only when configured.

@@ -20,6 +20,7 @@ v5: Health checks are cached for 15 minutes to avoid HTTP calls on every
 """
 
 import os
+import threading
 import time
 from datetime import datetime
 from typing import List, Optional
@@ -76,6 +77,7 @@ def flush_health_cache():
 _duffel_calls_today: int = 0
 _duffel_date: str = ""
 _duffel_daily_budget: int = int(os.getenv("DUFFEL_DAILY_BUDGET", "50"))
+_duffel_lock = threading.Lock()
 
 
 def _reset_duffel_budget_if_new_day():
@@ -88,29 +90,33 @@ def _reset_duffel_budget_if_new_day():
 
 def duffel_budget_remaining() -> int:
     """How many Duffel calls are left today?"""
-    _reset_duffel_budget_if_new_day()
-    return max(0, _duffel_daily_budget - _duffel_calls_today)
+    with _duffel_lock:
+        _reset_duffel_budget_if_new_day()
+        return max(0, _duffel_daily_budget - _duffel_calls_today)
 
 
 def duffel_budget_used_today() -> int:
-    _reset_duffel_budget_if_new_day()
-    return _duffel_calls_today
+    with _duffel_lock:
+        _reset_duffel_budget_if_new_day()
+        return _duffel_calls_today
 
 
 def record_duffel_call() -> bool:
     """Record a Duffel API call. Returns True if within budget, False if exceeded."""
     global _duffel_calls_today
-    _reset_duffel_budget_if_new_day()
-    if _duffel_calls_today >= _duffel_daily_budget:
-        return False  # Budget exceeded
-    _duffel_calls_today += 1
-    return True
+    with _duffel_lock:
+        _reset_duffel_budget_if_new_day()
+        if _duffel_calls_today >= _duffel_daily_budget:
+            return False  # Budget exceeded
+        _duffel_calls_today += 1
+        return True
 
 
 def duffel_under_budget() -> bool:
     """Check if Duffel is still within budget (without recording a call)."""
-    _reset_duffel_budget_if_new_day()
-    return _duffel_calls_today < _duffel_daily_budget
+    with _duffel_lock:
+        _reset_duffel_budget_if_new_day()
+        return _duffel_calls_today < _duffel_daily_budget
 
 
 def duffel_budget_ok() -> bool:

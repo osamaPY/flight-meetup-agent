@@ -60,6 +60,9 @@ PROVIDER_TIMEOUT = 12
 class SearchRunSummary:
     mode: str
     stopped: bool = False
+    stop_reason: str = ""
+    api_calls: int = 0
+    seconds: int = 0
     results: List[MeetupResult] = field(default_factory=list)
     new_top3: List[Any] = field(default_factory=list)
 
@@ -108,6 +111,9 @@ def get_best_flight(
     out_date: str,
     ret_date: str,
     providers: List[FlightProvider],
+    max_stops: Optional[int] = None,
+    should_stop=None,
+    call_counter: Optional[list] = None,
 ) -> Optional[Flight]:
     """Query ALL healthy providers in parallel. Collect every result. Return the CHEAPEST.
 
@@ -128,9 +134,12 @@ def get_best_flight(
 
     best: Optional[Flight] = None
     all_results: List[Flight] = []
+    # Per-search cancellation. Defaults to the process global for the CLI path;
+    # the bot passes its own per-group event so groups never cancel each other.
+    _stop = should_stop or SEARCH_STOP_EVENT.is_set
 
     def _query_one(p: FlightProvider, origin: str) -> Optional[Flight]:
-        if SEARCH_STOP_EVENT.is_set():
+        if _stop():
             return None
 
         # SQLite cache first
@@ -193,6 +202,10 @@ def get_best_flight(
             return None
 
     # --- Fire all providers in the SHARED pool (v5: reuse, don't create) ---
+    # Submit every (origin, provider) future FIRST, then drain them once. The
+    # old code nested the as_completed drain inside the origin loop, so already
+    # completed futures from earlier origins were processed again on each pass
+    # (duplicate quotes, repeated timeouts).
     pool = _get_shared_pool()
     future_map: Dict[concurrent.futures.Future, Tuple[FlightProvider, str]] = {}
     for origin in origins:
@@ -201,23 +214,31 @@ def get_best_flight(
         for p in providers:
             future_map[pool.submit(_query_one, p, origin)] = (p, origin)
 
-        for future in concurrent.futures.as_completed(future_map):
-            if SEARCH_STOP_EVENT.is_set():
-                break
-            provider, origin = future_map[future]
-            try:
-                fare = future.result(timeout=PROVIDER_TIMEOUT)
-            except FutureTimeout:
-                log_error(f"[{provider.name()}] TIMEOUT {origin}->{destination}")
-                continue
-            except Exception as exc:
-                log_error(f"[{provider.name()}] {origin}->{destination}: {exc}")
-                continue
+    # Real provider work done this call = number of futures submitted.
+    if call_counter is not None:
+        call_counter[0] += len(future_map)
 
-            if fare and fare.price > 0:
-                all_results.append(fare)
-                if not best or fare.price < best.price:
-                    best = fare
+    for future in concurrent.futures.as_completed(future_map):
+        if _stop():
+            break
+        provider, origin = future_map[future]
+        try:
+            fare = future.result(timeout=PROVIDER_TIMEOUT)
+        except FutureTimeout:
+            log_error(f"[{provider.name()}] TIMEOUT {origin}->{destination}")
+            continue
+        except Exception as exc:
+            log_error(f"[{provider.name()}] {origin}->{destination}: {exc}")
+            continue
+
+        # Enforce the direct-only / max-stops preference: pick the cheapest
+        # fare that actually meets the stop limit.
+        if fare and fare.price > 0 and (
+            max_stops is None or (fare.stops or 0) <= max_stops
+        ):
+            all_results.append(fare)
+            if not best or fare.price < best.price:
+                best = fare
 
     if all_results:
         prices = [f.price for f in all_results]
@@ -247,8 +268,8 @@ def monitor_mode(storage: Storage, notifier: Notifier, providers: List[FlightPro
         in_from = (datetime.strptime(out_from, "%Y-%m-%d") + timedelta(days=window.min_nights)).strftime("%Y-%m-%d")
         in_to = (datetime.strptime(out_from, "%Y-%m-%d") + timedelta(days=window.max_nights)).strftime("%Y-%m-%d")
 
-        best_a = get_best_flight(storage, Config.ORIGINS_A, dest_iata, out_from, in_from, providers)
-        best_b = get_best_flight(storage, Config.ORIGINS_B, dest_iata, out_from, in_from, providers)
+        best_a = get_best_flight(storage, Config.DEFAULT_ORIGINS_A, dest_iata, out_from, in_from, providers)
+        best_b = get_best_flight(storage, Config.DEFAULT_ORIGINS_B, dest_iata, out_from, in_from, providers)
 
         if best_a and best_b:
             return score_meetup(best_a, best_b)
@@ -443,6 +464,7 @@ def booking_mode(
     providers: List[FlightProvider],
     progress_callback=None,
     search_request=None,  # v6: SearchRequest from src.core.search_request
+    should_stop=None,     # per-search cancel; defaults to the process global
 ) -> SearchRunSummary:
     """v6: Parameterized meetup search - any group size (2-4), any origins, any dates.
 
@@ -451,6 +473,10 @@ def booking_mode(
     """
     from src.core.search_request import SearchRequest, ParticipantGroup
     from src.core.scoring import score_group_meetup
+
+    # Per-search cancellation. The bot passes its own per-group event so one
+    # group's Stop can never halt another group's concurrent search.
+    _stop = should_stop or SEARCH_STOP_EVENT.is_set
 
     # ── Resolve search request ──
     if search_request is None:
@@ -500,19 +526,25 @@ def booking_mode(
         exclude_iatas=exclude_set,
         universe=req.destination_universe,
     )
+    if req.destinations:
+        requested = {d.upper() for d in req.destinations}
+        all_destinations = [
+            dest for dest in all_destinations
+            if dest.iata.upper() in requested
+        ]
 
     # ── Calendar-first discovery pre-scan (free, bounded, best-effort) ──
     # Refreshes the flight_legs price surface from Ryanair's month-level
     # calendar for confirmed routes, so the cheapest-first ordering below
     # runs on fresh data instead of possibly-stale history.
-    if not SEARCH_STOP_EVENT.is_set():
+    if not _stop():
         try:
             from src.core.smart_search import discovery_prescan
             discovery_prescan(
                 storage, req.all_origins,
                 [d.iata for d in all_destinations],
                 req.depart_earliest, req.depart_latest,
-                should_stop=SEARCH_STOP_EVENT.is_set,
+                should_stop=_stop,
             )
         except Exception as exc:
             log_error(f"Discovery pre-scan skipped: {exc}")
@@ -526,7 +558,12 @@ def booking_mode(
     )
 
     # ── API Protection ──
+    # _calls[0] is incremented by get_best_flight with the true number of
+    # provider futures it submits, so the budget guard reflects real work
+    # (variants x per-participant origins x providers), not a flat estimate.
     MAX_API_CALLS = Config.MAX_API_CALLS_PER_RUN
+    unlimited_calls = MAX_API_CALLS <= 0
+    _calls = [0]
     current_calls = 0
 
     # ── Country round-robin spread ──
@@ -537,13 +574,18 @@ def booking_mode(
         by_country[d.country].append(d)
 
     spread_list = []
-    max_per_country = 3
+    max_per_country = max(
+        (len(destinations) for destinations in by_country.values()),
+        default=0,
+    )
     for i in range(max_per_country):
         for country in sorted(by_country.keys()):
             if i < len(by_country[country]):
                 spread_list.append(by_country[country][i])
 
-    log_info(f"Targeting {len(spread_list)} destinations across {len(by_country)} countries")
+    log_info(
+        f"Targeting {len(spread_list)} destinations across {len(by_country)} countries"
+    )
 
     # ── Expand to nearby airports (with dynamic exclusions) ──
     all_results = []
@@ -574,24 +616,34 @@ def booking_mode(
                   "The search will still attempt every provider once.")
         devlog.flag("no healthy providers at search start",
                     providers=list(health.keys()))
+    active_providers = [p for p in providers if health.get(p.name())] or providers
+    date_variant_mode = Config.SEARCH_DATE_VARIANT_MODE
+    if date_variant_mode == "auto":
+        date_variant_mode = "all" if unlimited_calls else "exact"
+    if date_variant_mode not in {"exact", "flexible", "all"}:
+        log_error(
+            f"Unknown SEARCH_DATE_VARIANT_MODE={date_variant_mode!r}; using auto"
+        )
+        date_variant_mode = "all" if unlimited_calls else "exact"
+    log_info(f"Date variant mode: {date_variant_mode}")
 
     for window, date_pairs in exact_pairs_by_window:
         log_info(f"Scanning window {window.depart_earliest} to {window.depart_latest}...")
         for out_from, in_from in date_pairs:
             for city_dest, dest in expanded_targets:
-                if SEARCH_STOP_EVENT.is_set():
+                if _stop():
                     break
                 step += 1
                 if progress_callback:
                     progress_callback(step, total_steps, f"{city_dest.city} {out_from}")
-                if current_calls >= MAX_API_CALLS:
+                if not unlimited_calls and current_calls >= MAX_API_CALLS:
                     break
 
                 # ── SMART LAYER 4: Flexible date search (N people) ──
                 # Prefer healthy providers, but if a flaky health check marks
                 # them all down, still attempt every provider rather than
                 # silently returning zero results.
-                active = [p for p in providers if p.is_healthy()] or providers
+                active = active_providers
                 meetup_candidates = flexible_date_search(
                     storage,
                     member_origins,
@@ -603,8 +655,11 @@ def booking_mode(
                     luggage=req.luggage,
                     include_transfers=req.include_transfers,
                     max_stops=req.effective_max_stops,
+                    should_stop=_stop,
+                    call_counter=_calls,
+                    variant_mode=date_variant_mode,
                 )
-                current_calls += req.people_count * len(active)
+                current_calls = _calls[0]
 
                 for res in meetup_candidates:
                     res.dest_city = city_dest.city
@@ -619,10 +674,11 @@ def booking_mode(
                         )
                         conf_labels.append(consensus['label'])
 
-                    # Use worst confidence as overall
+                    # Use worst confidence as overall. provider_consensus emits
+                    # "SINGLE_SOURCE" (never "SINGLE"), so match the real label.
                     if "LOW" in conf_labels or "" in conf_labels:
                         res.confidence_label = "LOW"
-                    elif "SINGLE" in conf_labels:
+                    elif any("SINGLE" in c for c in conf_labels):
                         res.confidence_label = "SINGLE_SOURCE"
                     elif "MEDIUM" in conf_labels:
                         res.confidence_label = "MEDIUM"
@@ -676,11 +732,11 @@ def booking_mode(
                                 f"{res.grand_total:.0f} all-in on {res.outbound_date}"
                             )
 
-            if SEARCH_STOP_EVENT.is_set() or current_calls >= MAX_API_CALLS:
+            if _stop() or (not unlimited_calls and current_calls >= MAX_API_CALLS):
                 break
-        if SEARCH_STOP_EVENT.is_set():
+        if _stop():
             break
-        if current_calls >= MAX_API_CALLS:
+        if not unlimited_calls and current_calls >= MAX_API_CALLS:
             log_info(f"Reached MAX_API_CALLS_PER_RUN ({MAX_API_CALLS}). Stopping.")
             break
 
@@ -698,14 +754,17 @@ def booking_mode(
     else:
         log_info("No new matches found.")
 
-    stopped = SEARCH_STOP_EVENT.is_set()
+    hit_call_cap = not unlimited_calls and current_calls >= MAX_API_CALLS
+    stopped = _stop() or hit_call_cap
+    stop_reason = "user_stop" if _stop() else "api_call_cap" if hit_call_cap else ""
     cities = len({getattr(r, "dest_city", "") or r.destination for r in all_results})
+    seconds = int(time.time() - _t0)
     devlog.event(
         "search_end",
         search_id=req.id if has_search_record else None,
         results=len(all_results), cities=cities,
-        api_calls=current_calls, seconds=int(time.time() - _t0),
-        stopped=stopped,
+        api_calls=current_calls, seconds=seconds,
+        stopped=stopped, stop_reason=stop_reason,
         best_all_in=round(min((r.grand_total for r in all_results), default=0), 2),
     )
     if not all_results:
@@ -717,6 +776,9 @@ def booking_mode(
     return SearchRunSummary(
         mode=mode_label,
         stopped=stopped,
+        stop_reason=stop_reason,
+        api_calls=current_calls,
+        seconds=seconds,
         results=rank_results(all_results) if all_results else [],
         new_top3=_find_new_top3(previous_top3, current_top3),
     )

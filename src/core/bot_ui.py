@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 from src.core.airports import CANDIDATE_DESTINATIONS, Airport
+from src.core.config import Config
 
 
 # ---------------------------------------------------------------------------
@@ -24,6 +25,11 @@ from src.core.airports import CANDIDATE_DESTINATIONS, Airport
 def esc(s) -> str:
     """HTML-escape any user-sourced string for parse_mode='HTML'."""
     return html.escape(str(s if s is not None else ""), quote=False)
+
+
+def esc_attr(s) -> str:
+    """HTML-escape a string for an attribute such as href."""
+    return html.escape(str(s if s is not None else ""), quote=True)
 
 
 # ---------------------------------------------------------------------------
@@ -116,8 +122,8 @@ def eur(v) -> str:
 
 def nights_of(out: str, ret: str) -> int:
     try:
-        return (datetime.strptime(ret, "%Y-%m-%d")
-                - datetime.strptime(out, "%Y-%m-%d")).days
+        return max(0, (datetime.strptime(ret, "%Y-%m-%d")
+                       - datetime.strptime(out, "%Y-%m-%d")).days)
     except Exception:
         return 0
 
@@ -242,16 +248,21 @@ SCOPE_LABELS = {
 
 
 def default_search_config() -> dict:
-    """Smart defaults: next month, 2-4 nights, 10kg, transfers, any, Europe."""
+    """Smart defaults, all overridable from .env for portfolio/fork users."""
     today = datetime.now()
     return {
-        "start": (today + timedelta(days=14)).strftime("%Y-%m-%d"),
-        "end": (today + timedelta(days=42)).strftime("%Y-%m-%d"),
-        "min_n": 2, "max_n": 4,
-        "luggage": "carryon_10kg",
-        "transfers": True,
-        "direct": False,
-        "scope": "europe",
+        "start": (
+            today + timedelta(days=Config.DEFAULT_SEARCH_START_OFFSET_DAYS)
+        ).strftime("%Y-%m-%d"),
+        "end": (
+            today + timedelta(days=Config.DEFAULT_SEARCH_END_OFFSET_DAYS)
+        ).strftime("%Y-%m-%d"),
+        "min_n": Config.DEFAULT_MIN_NIGHTS,
+        "max_n": Config.DEFAULT_MAX_NIGHTS,
+        "luggage": Config.DEFAULT_LUGGAGE,
+        "transfers": Config.DEFAULT_INCLUDE_TRANSFERS,
+        "direct": Config.DEFAULT_DIRECT_ONLY,
+        "scope": Config.DEFAULT_DESTINATION_UNIVERSE,
     }
 
 
@@ -500,13 +511,24 @@ def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
         spread = (max(person_totals) - min(person_totals)) if person_totals else 0
         cheapest = min(range(len(participants)), key=lambda i: person_totals[i])
         priciest = max(range(len(participants)), key=lambda i: person_totals[i])
+        raw_shares = [(value / pool * 100) for value in person_totals]
+        share_floors = [int(value) for value in raw_shares]
+        remainder = max(0, 100 - sum(share_floors))
+        share_order = sorted(
+            range(len(raw_shares)),
+            key=lambda i: raw_shares[i] - share_floors[i],
+            reverse=True,
+        )
+        shares = share_floors[:]
+        for i in share_order[:remainder]:
+            shares[i] += 1
         lines += ["", "\U0001f3ab <b>Per-person tickets</b>"]
         for idx, p in enumerate(participants):
             price = float(p.get("price", 0) or 0)
             person_bag = float(p.get("bag_cost", 0) or 0)
             person_xfer = float(p.get("transfer_cost", 0) or 0)
             person_total = person_totals[idx]
-            share = int(round(person_total / pool * 100))
+            share = shares[idx]
             who = esc(p.get("label", "?"))
             origin = esc(p.get("origin", "?"))
             airline = esc(p.get("airline", "") or "")
@@ -519,9 +541,10 @@ def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
             if journey:
                 stops_txt += f" · {journey} total"
             layover = esc(p.get("layover", "") or "")
-            arrival = esc(p.get("arrival_time", "") or "")
+            arrival = p.get("arrival_time", "") or ""
             bag_note = "included" if p.get("bag_included") else eur(person_bag)
             route_link = p.get("deep_link") or gf_link(p.get("origin", ""), dest, out, ret)
+            safe_route_link = esc_attr(route_link)
             tag = ""
             if len(participants) > 1 and idx == cheapest:
                 tag = " \U0001f4b8 cheapest"
@@ -544,7 +567,7 @@ def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
                 lines.append("  has a stop - check the connection when booking")
             if arrival:
                 lines.append(f"  arrives {esc(fmt_datetime(arrival))}")
-            lines.append(f"  \U0001f3ab <a href=\"{route_link}\">Book this flight</a>")
+            lines.append(f"  \U0001f3ab <a href=\"{safe_route_link}\">Book this flight</a>")
         lines.append(f"\n\u2696\ufe0f Fairness: {_fairness(spread)} (spread {eur(spread)})")
         arrivals_block = fmt_arrivals(participants)
         if arrivals_block:

@@ -7,6 +7,7 @@ Last updated: 2026-07-05
 - Python 3.11+
 - A Telegram bot token from BotFather (to run the bot)
 - Optional: a DeepSeek API key for the AI concierge features
+- Optional: Travelpayouts/Amadeus keys for extra free/API coverage
 - Optional: a Duffel token for paid GDS quotes
 
 SQLite is built in; the app creates `data/flights.db` automatically. It runs
@@ -30,19 +31,37 @@ On Unix-like shells, use `cp .env.example .env`.
 | `TELEGRAM_BOT_TOKEN` | Bot only | Token from BotFather |
 | `TELEGRAM_CHAT_ID` | Owner/admin | Your numeric Telegram user ID (owner) |
 | `REQUIRE_INVITE_CODE` | Optional | `1` makes the bot invite-only |
+| `DEFAULT_PARTICIPANT_A_LABEL` / `DEFAULT_PARTICIPANT_B_LABEL` | Optional | Labels for the fallback two-person search |
+| `DEFAULT_ORIGINS_A` / `DEFAULT_ORIGINS_B` | Optional | Comma-separated default origin airport codes, e.g. `BGY,MXP,LIN` |
+| `DEFAULT_SEARCH_START_OFFSET_DAYS` / `DEFAULT_SEARCH_END_OFFSET_DAYS` | Optional | Default Telegram search window relative to today |
+| `DEFAULT_MIN_NIGHTS` / `DEFAULT_MAX_NIGHTS` | Optional | Default trip length range |
+| `DEFAULT_LUGGAGE` | Optional | `none`, `carryon_10kg`, or `checked_23kg` |
+| `DEFAULT_INCLUDE_TRANSFERS` | Optional | `1` includes airport transfers in all-in pricing |
+| `DEFAULT_DIRECT_ONLY` / `DEFAULT_MAX_STOPS` | Optional | Default flight stop policy |
+| `DEFAULT_DESTINATION_UNIVERSE` | Optional | `europe`, `schengen`, or `anywhere` |
 | `DEEPSEEK_API_KEY` | Optional | Enables the AI concierge; blank disables it |
 | `DEEPSEEK_MODEL` | Optional | Defaults to `deepseek-chat` |
 | `TRAVELPAYOUTS_TOKEN` | Optional | Free flight-data API; works from a server IP where scraping is blocked |
+| `AMADEUS_CLIENT_ID` / `AMADEUS_CLIENT_SECRET` | Optional | Enables Amadeus verification provider |
+| `AMADEUS_HOSTNAME` | Optional | `test` by default; use `production` only if provisioned |
 | `DUFFEL_TOKEN` | Optional | Enables paid Duffel provider for owner searches |
 | `DUFFEL_DAILY_BUDGET` | Optional | Daily Duffel safety cap, default 50 |
 | `TARGET_PRICE_EUR` | Optional | Price threshold used by older CLI flows |
-| `MAX_API_CALLS_PER_RUN` | Optional | Safety cap for full scans |
-| `JWT_SECRET` | Future/API auth | Present in config, not central to current bot UX |
+| `MAX_API_CALLS_PER_RUN` | Optional | Provider-call safety cap for full scans; default 5000, set 0 for unlimited/brute-force |
+| `SEARCH_DATE_VARIANT_MODE` | Optional | `auto` by default; capped searches prioritize exact-date breadth, unlimited searches use full flexible dates |
 
 `.env.example` lists exactly these. Copy it to `.env` and fill in what you need;
 at minimum the bot needs `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`. Never
 commit your real `.env` (it is gitignored). Owner checks are based on
 `TELEGRAM_CHAT_ID`.
+
+## Make It Yours
+
+For a portfolio fork, keep secrets out of Git and customize via `.env`. The
+defaults above control the first search panel users see, plus the fallback CLI
+search. Telegram groups remain fully dynamic: users can add their own members,
+origin airports, dates, nights, luggage, transfer preference, direct-only mode,
+and destination scope without changing code.
 
 ## Run The Bot
 
@@ -86,7 +105,7 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for the full story.
 python -m pytest -q
 ```
 
-65 offline tests, no network or API keys required (they also run in CI).
+71 offline tests, no network or API keys required (they also run in CI).
 
 ## Run CLI
 

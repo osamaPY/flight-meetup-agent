@@ -35,9 +35,14 @@ class WeatherClient:
             
             if date in dates:
                 idx = dates.index(date)
-                code = daily.get("weather_code", [])[idx]
-                t_max = daily.get("temperature_2m_max", [])[idx]
-                t_min = daily.get("temperature_2m_min", [])[idx]
+                codes = daily.get("weather_code", [])
+                highs = daily.get("temperature_2m_max", [])
+                lows = daily.get("temperature_2m_min", [])
+                if idx >= len(codes) or idx >= len(highs) or idx >= len(lows):
+                    return None
+                code = codes[idx]
+                t_max = highs[idx]
+                t_min = lows[idx]
                 
                 condition = self._interpret_code(code)
                 return f"{condition} ({t_min}°C to {t_max}°C)"

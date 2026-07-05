@@ -1,6 +1,6 @@
 # Codebase Guide
 
-Current snapshot: ~46 Python files, ~10,900 Python lines, 5 offline test files.
+Current snapshot: 52 Python files, about 12,700 Python lines, 8 offline test files.
 
 Last updated: 2026-07-05
 
@@ -10,8 +10,8 @@ Last updated: 2026-07-05
 flight_optimizer/
   README.md
   main.py                         CLI + provider waterfall + booking_mode
-  telegram_bot.py                 v7 "one card" Telegram UX: simple group screen,
-                                  guided setup, results, AI ask-a-question helper, admin
+  telegram_bot.py                 v7 "one card" Telegram UX: group screen,
+                                  tap-to-change setup, results, AI helper, admin
   flight_api_server.py            FastAPI local API
   requirements.txt
   start.bat / start_api.bat
@@ -23,7 +23,7 @@ flight_optimizer/
     smart_search.py               5 smart layers + calendar-first discovery pre-scan
     provider_registry.py          capability-tagged registry + discovery/verification tiers
     providers.py                  provider base and concrete providers (incl. Ryanair Calendar)
-    provider_factory.py           registry-backed builders, health cache, Duffel budget
+    provider_factory.py           registry-backed builders and Duffel budget
     route_graph.py                Ryanair route-graph pruning (cached, fail-open)
     cost_utils.py                 bag costs, transfer costs, sanity helpers
     ai_assistant.py               DeepSeek concierge (recommend a city, things to do)
@@ -37,10 +37,11 @@ flight_optimizer/
   src/clients/
     ryanair_client.py
     google_scraper.py
+    travelpayouts_client.py
+    amadeus_client.py
     duffel_client.py
     deepseek_client.py            OpenAI-compatible LLM client (fail-soft)
     weather_client.py
-    routestack_client.py          inactive/legacy hotel client
 
   src/scrapers/
     multi_google.py
@@ -62,7 +63,11 @@ flight_optimizer/
     test_bot_ui.py                pure UI-helper tests
     test_registry.py              registry invariants, route graph, discovery pre-scan
     test_ai_assistant.py          AI prompt-building with a mocked client
-    test_apis.py                  provider health
+    test_apis.py                  provider health smoke test
+    test_amadeus.py               Amadeus parser/client behavior
+    test_travelpayouts.py         Travelpayouts client behavior
+    test_manual_member.py         manual-member group behavior
+    test_recheck.py               live recheck/update behavior
 
   docs/                           internal notes (not published)
   guidebook/                      public docs shipped on GitHub
@@ -72,11 +77,11 @@ Largest files by live line count (approx):
 
 | File | Lines | Purpose |
 |---|---:|---|
-| `src/core/storage.py` | ~1560 | SQLite persistence and admin queries |
-| `telegram_bot.py` | ~1440 | Main product UX (v7) |
-| `main.py` | ~880 | Search engine and CLI |
-| `src/core/scoring.py` | ~550 | Models and ranking |
-| `flight_api_server.py` | ~525 | REST API |
+| `src/core/storage.py` | ~1640 | SQLite persistence and admin queries |
+| `telegram_bot.py` | ~1920 | Main product UX (v7) |
+| `main.py` | ~970 | Search engine and CLI |
+| `src/core/scoring.py` | ~570 | Models and ranking |
+| `flight_api_server.py` | ~510 | REST API |
 
 ## Core Models
 
@@ -112,7 +117,7 @@ owner gets a "joined" ping.
 
 ```text
 Group screen -> "Find flights" (one-tap smart defaults) or
-                "Pick dates / options first" (guided 6-question setup)
+                "Pick dates / options first" (tap-to-change settings setup)
   settings: dates / nights / luggage / transfers / flights / scope
             all pre-filled, tap-to-change, LAUNCH always 1 tap
   (a "Ask a question" AI helper answers how-to questions in plain words)
@@ -161,7 +166,7 @@ python main.py selftest
 python flight_api_server.py
 python scripts/dashboard.py
 python scripts/backup_db.py
-python -m pytest -q          # 44 offline tests, no network needed
+python -m pytest -q          # 71 offline tests, no network needed
 ```
 
 ## Debugging

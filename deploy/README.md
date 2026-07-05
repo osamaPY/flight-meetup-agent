@@ -81,8 +81,7 @@ TELEGRAM_BOT_TOKEN=123456:your-token-from-botfather
 ```
 
 The rest is optional. `DEEPSEEK_API_KEY` turns on the AI suggestion button, and
-`DUFFEL_TOKEN` / the Amadeus keys add extra flight sources. The bot runs fine
-on the free Ryanair and Google data without any of them.
+`TRAVELPAYOUTS_TOKEN` adds a server-friendly free API source, `AMADEUS_CLIENT_ID` / `AMADEUS_CLIENT_SECRET` add an optional GDS source, and `DUFFEL_TOKEN` adds a paid GDS source. The bot runs fine on the free Ryanair and Google data without any of them.
 
 ## 6. Start it
 

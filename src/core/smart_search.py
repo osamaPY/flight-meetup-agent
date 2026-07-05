@@ -45,18 +45,22 @@ def calendar_pre_scan(
     prioritize destination ordering.
     """
     price_map: Dict[str, float] = {}
+    if not origins:
+        return price_map
     three_months_ago = (datetime.now() - timedelta(days=90)).isoformat()
 
     try:
         with storage._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            placeholders = ",".join("?" for _ in origins)
+            cursor.execute(f"""
                 SELECT destination, MIN(price)
                 FROM flight_legs
                 WHERE timestamp > ?
+                  AND origin IN ({placeholders})
                   AND price > 0
                 GROUP BY destination
-            """, (three_months_ago,))
+            """, (three_months_ago, *origins))
             for dest_iata, min_price in cursor.fetchall():
                 price_map[dest_iata] = float(min_price)
     except Exception:
@@ -253,7 +257,7 @@ def build_round_trip_from_legs(
         destination=destination,
         price=best_out.price + best_ret.price,
         outbound_date=best_out.outbound_date,
-        return_date=best_ret.return_date,
+        return_date=best_ret.outbound_date,
         stops=best_out.stops + best_ret.stops,
         arrival_time=best_out.arrival_time,
         source=f"{best_out.source}+{best_ret.source}",
@@ -276,6 +280,9 @@ def flexible_date_search(
     luggage: str = "carryon_10kg",       # v6.1
     include_transfers: bool = True,       # v6.1
     max_stops: int = 2,                   # v6.1
+    should_stop=None,                     # per-search cancellation
+    call_counter: Optional[list] = None,  # accurate provider-call accounting
+    variant_mode: str = "all",            # "all" | "exact" | "flexible"
 ) -> list:
     """Layer 4: Try the exact dates plus +/- 1 day shifts.
 
@@ -291,16 +298,24 @@ def flexible_date_search(
     out_dt = datetime.strptime(out_date, "%Y-%m-%d")
     ret_dt = datetime.strptime(ret_date, "%Y-%m-%d")
 
-    # Generate date variants: [exact, out-1, out+1, ret-1, ret+1]
-    variants: List[Tuple[str, str]] = [(out_date, ret_date)]
+    if variant_mode not in {"all", "exact", "flexible"}:
+        variant_mode = "all"
 
-    for offset in (-1, 1):
-        v_out = (out_dt + timedelta(days=offset)).strftime("%Y-%m-%d")
-        variants.append((v_out, ret_date))
+    # Generate date variants. The main bot search runs these as two passes:
+    # exact first for broad city coverage, then flexible shifts if budget
+    # remains. CLI/backward-compatible callers can still use "all".
+    variants: List[Tuple[str, str]] = []
+    if variant_mode in {"all", "exact"}:
+        variants.append((out_date, ret_date))
 
-    for offset in (-1, 1):
-        v_ret = (ret_dt + timedelta(days=offset)).strftime("%Y-%m-%d")
-        variants.append((out_date, v_ret))
+    if variant_mode in {"all", "flexible"}:
+        for offset in (-1, 1):
+            v_out = (out_dt + timedelta(days=offset)).strftime("%Y-%m-%d")
+            variants.append((v_out, ret_date))
+
+        for offset in (-1, 1):
+            v_ret = (ret_dt + timedelta(days=offset)).strftime("%Y-%m-%d")
+            variants.append((out_date, v_ret))
 
     seen = set()
     for v_out, v_ret in variants:
@@ -319,7 +334,9 @@ def flexible_date_search(
         # Search flights for every participant
         all_flights = []
         for origins in member_origins:
-            best = get_best_fn(storage, origins, destination_iata, v_out, v_ret, providers)
+            best = get_best_fn(storage, origins, destination_iata, v_out, v_ret,
+                               providers, max_stops=max_stops,
+                               should_stop=should_stop, call_counter=call_counter)
             if best:
                 all_flights.append(best)
 

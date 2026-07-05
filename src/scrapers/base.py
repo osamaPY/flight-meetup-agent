@@ -81,7 +81,8 @@ class BaseScraper(ABC):
         valid: List[Flight] = []
         for f in results:
             if f.price and f.price > 0:
-                f.source = self.name()
+                if not f.source:
+                    f.source = self.name()
                 valid.append(f)
 
         self._cache_set(cache_key, valid)
