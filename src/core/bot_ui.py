@@ -98,15 +98,20 @@ def flag_of(iata: str) -> str:
     return a.flag if a else "\U0001f4cd"
 
 
+def country_of(iata: str) -> str:
+    a = next((x for x in CANDIDATE_DESTINATIONS if x.iata == iata), None)
+    return a.country if a else ""
+
+
 # ---------------------------------------------------------------------------
 # Small formatting atoms
 # ---------------------------------------------------------------------------
 
 def eur(v) -> str:
     try:
-        return f"€{float(v):,.0f}"
+        return f"\u20ac{float(v):,.0f}"
     except (TypeError, ValueError):
-        return "€?"
+        return "\u20ac?"
 
 
 def nights_of(out: str, ret: str) -> int:
@@ -126,18 +131,36 @@ def fmt_date(d: str) -> str:
         return d
 
 
+def fmt_day(d: str) -> str:
+    """'2026-08-01' -> 'Fri Aug 1' (weekday-aware; Windows-safe)."""
+    try:
+        dt = datetime.strptime(d, "%Y-%m-%d")
+        return f"{dt.strftime('%a')} {dt.strftime('%b')} {dt.day}"
+    except Exception:
+        return d
+
+
+def fmt_datetime(s: str) -> str:
+    """'2026-08-07 14:30' -> 'Fri Aug 7, 14:30' (Windows-safe)."""
+    try:
+        dt = datetime.strptime(s, "%Y-%m-%d %H:%M")
+        return f"{dt.strftime('%a')} {dt.strftime('%b')} {dt.day}, {dt.strftime('%H:%M')}"
+    except Exception:
+        return s
+
+
 def progress_bar(pct: int, width: int = 12) -> str:
     pct = max(0, min(100, int(pct)))
     filled = int(width * pct / 100)
-    return "▓" * filled + "░" * (width - filled)
+    return "\u2593" * filled + "\u2591" * (width - filled)
 
 
 def conf_icon(label: str) -> str:
     return {
         "HIGH": "\U0001f7e2", "MEDIUM": "\U0001f7e1",
         "SINGLE_SOURCE": "\U0001f535", "SINGLE": "\U0001f535",
-        "LOW": "⚪",
-    }.get(label or "", "⚪")
+        "LOW": "\u26aa",
+    }.get(label or "", "\u26aa")
 
 
 def gf_link(origin: str, dest: str, out: str, ret: str) -> str:
@@ -156,7 +179,7 @@ LUGGAGE_LABELS = {
 }
 SCOPE_LABELS = {
     "europe": "Europe",
-    "schengen": "Schengen only",
+    "schengen": "Schengen countries only",
     "anywhere": "Everywhere",
 }
 
@@ -185,15 +208,15 @@ def fmt_settings_panel(group_name: str, member_count: int, cfg: dict) -> str:
     return (
         f"\U0001f50d <b>Search - {esc(group_name)}</b>\n"
         f"\U0001f465 {member_count} member{'s' if member_count != 1 else ''}"
-        f" · everything below is tap-to-change\n"
-        f"──────────────────\n"
-        f"\U0001f4c5 <b>Dates</b>  {esc(cfg.get('start', '?'))} → {esc(cfg.get('end', '?'))}\n"
+        f" \u00b7 everything below is tap-to-change\n"
+        f"\u2500" * 18 + "\n"
+        f"\U0001f4c5 <b>Dates</b>  {esc(cfg.get('start', '?'))} \u2192 {esc(cfg.get('end', '?'))}\n"
         f"\U0001f319 <b>Nights</b>  {nights_label(cfg)}\n"
         f"\U0001f9f3 <b>Luggage</b>  {LUGGAGE_LABELS.get(cfg.get('luggage'), '?')}\n"
         f"\U0001f686 <b>Transfers</b>  {'included' if cfg.get('transfers', True) else 'flights only'}\n"
-        f"✈️ <b>Flights</b>  {'direct only' if cfg.get('direct') else 'any (cheapest)'}\n"
+        f"\u2708\ufe0f <b>Flights</b>  {'direct only' if cfg.get('direct') else 'any (cheapest)'}\n"
         f"\U0001f30d <b>Where</b>  {SCOPE_LABELS.get(cfg.get('scope'), '?')}\n"
-        f"──────────────────\n"
+        f"\u2500" * 18 + "\n"
         f"Ready when you are - hit Launch \U0001f680"
     )
 
@@ -206,9 +229,89 @@ def _grand(r: dict) -> float:
     return float(r.get("grand_total", 0) or r.get("total_price", 0) or 0)
 
 
+def _source_label(value: str) -> str:
+    value = str(value or "").replace("_", " ").replace("+", " + ").strip()
+    if not value:
+        return "source unknown"
+    names = {
+        "ryanair": "Ryanair",
+        "ryanair calendar": "Ryanair calendar",
+        "google": "Google Flights",
+        "google scraper": "Google Flights",
+        "google multimode": "Google Flights",
+        "google calendar": "Google calendar",
+        "amadeus": "Amadeus",
+        "duffel": "Duffel",
+    }
+    return names.get(value.lower(), value)
+
+
+def _stops_label(stops) -> str:
+    try:
+        n = int(stops or 0)
+    except Exception:
+        n = 0
+    return "direct" if n == 0 else f"{n} stop{'s' if n != 1 else ''}"
+
+
+def _person_total(p: dict) -> float:
+    return (
+        float(p.get("price", 0) or 0)
+        + float(p.get("bag_cost", 0) or 0)
+        + float(p.get("transfer_cost", 0) or 0)
+    )
+
+
+def _people_count(r: dict) -> int:
+    parts = r.get("participants") or []
+    return len(parts) or int(r.get("people_count", 0) or 0)
+
+
+def _per_person(r: dict) -> float:
+    """Average all-in cost per traveller."""
+    n = _people_count(r)
+    return _grand(r) / n if n else _grand(r)
+
+
+def _connection_note(participants: List[dict]) -> str:
+    """'all direct' / '1 with a stop' summary across the whole group."""
+    if not participants:
+        return ""
+    stopped = sum(1 for p in participants if int(p.get("stops", 0) or 0) > 0)
+    if stopped == 0:
+        return "all direct"
+    if stopped == len(participants):
+        return "all have a stop"
+    return f"{stopped} with a stop"
+
+
+def _fairness(spread: float) -> str:
+    if spread < 15:
+        return "✅ very even"
+    if spread < 50:
+        return "⚖️ a bit uneven"
+    return "⚠️ uneven - one person pays a lot more"
+
+
+def _receipt_row(label: str, amount, width: int = 22) -> str:
+    """One monospace receipt line: label left, amount right (space padded)."""
+    money = eur(amount)
+    pad = max(1, width - len(label) - len(money))
+    return f"{label}{' ' * pad}{money}"
+
+
+CONF_TEXT = {
+    "HIGH": "price confirmed by multiple sources",
+    "MEDIUM": "sources disagree a little - verify before booking",
+    "SINGLE_SOURCE": "seen at one source only - verify before booking",
+    "SINGLE": "seen at one source only - verify before booking",
+    "LOW": "weak signal - verify before booking",
+}
+
+
 def fmt_results_list(group_name: str, deals: List[dict],
-                     page: int = 0, per_page: int = 8) -> Tuple[str, int, int]:
-    """Compact ranked city list, one line per deal.
+                     page: int = 0, per_page: int = 5) -> Tuple[str, int, int]:
+    """Ranked city list: a rich but scannable block per deal.
 
     Returns (text, clamped_page, total_pages).
     """
@@ -222,7 +325,8 @@ def fmt_results_list(group_name: str, deals: List[dict],
     medals = {1: "\U0001f947", 2: "\U0001f948", 3: "\U0001f949"}
     lines = [
         f"\U0001f3c6 <b>Best meetups - {esc(group_name)}</b>",
-        f"{len(deals)} cities · all-in per group · tap a city for details",
+        f"{len(deals)} cities ranked by all-in group cost \u00b7 "
+        f"tap one for the full breakdown",
         "",
     ]
     for i, r in enumerate(chunk):
@@ -233,9 +337,32 @@ def fmt_results_list(group_name: str, deals: List[dict],
         flag = r.get("dest_flag") or flag_of(dest)
         out, ret = r.get("outbound_date", "?"), r.get("return_date", "?")
         n = nights_of(out, ret)
+        grand = _grand(r)
+        total = float(r.get("total_price", 0) or 0)
+        bag = float(r.get("bag_cost", 0) or 0)
+        xfer = float(r.get("transfer_cost", 0) or 0)
+        participants = r.get("participants", []) or []
+        pp = _per_person(r)
+        per_person = " · ".join(
+            f"{esc(p.get('label', '?'))} {eur(_person_total(p))}"
+            for p in participants[:3]
+        )
+        if len(participants) > 3:
+            per_person += f" · +{len(participants) - 3} more"
+        source = _source_label(r.get("source") or (
+            participants[0].get("source") if participants else ""
+        ))
+        conn = _connection_note(participants)
+        via = f"via {esc(source)}" + (f" · {conn}" if conn else "")
         lines.append(
-            f"{badge} {flag} <b>{esc(city)}</b> - <b>{eur(_grand(r))}</b>"
-            f" · {n}n · {conf_icon(r.get('confidence_label'))}"
+            f"{badge} {flag} <b>{esc(city)}</b> - <b>{eur(grand)} all-in</b>"
+            f" \u00b7 ~{eur(pp)}pp\n"
+            f"   \U0001f4c5 {fmt_date(out)}\u2192{fmt_date(ret)} \u00b7 {n}n"
+            f" \u00b7 {conf_icon(r.get('confidence_label'))}\n"
+            f"   \U0001f9fe flights {eur(total)} · bags {eur(bag)}"
+            f" · transfers {eur(xfer)}\n"
+            f"   \U0001f465 {per_person or 'per-person data unavailable'}\n"
+            f"   ✈️ {via}"
         )
     if total_pages > 1:
         lines += ["", f"page {page + 1}/{total_pages}"]
@@ -243,10 +370,11 @@ def fmt_results_list(group_name: str, deals: List[dict],
 
 
 def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
-    """Full card for one deal: costs, per-person fairness, dates, links."""
+    """Full receipt for one deal: everything known, per person, structured."""
     dest = r.get("destination", "?")
     city = r.get("dest_city") or city_of(dest)
     flag = r.get("dest_flag") or flag_of(dest)
+    country = r.get("dest_country") or country_of(dest)
     out, ret = r.get("outbound_date", "?"), r.get("return_date", "?")
     n = nights_of(out, ret)
     total = float(r.get("total_price", 0) or 0)
@@ -254,50 +382,106 @@ def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
     bag = float(r.get("bag_cost", 0) or 0)
     xfer = float(r.get("transfer_cost", 0) or 0)
     participants = r.get("participants", []) or []
+    people = _people_count(r)
+    pp = _per_person(r)
+    source = _source_label(r.get("source") or (
+        participants[0].get("source") if participants else ""
+    ))
+    airlines = esc(r.get("flight_airlines", "") or "")
+    flight_numbers = esc(r.get("flight_numbers", "") or "")
+    arrival_gap = float(r.get("arrival_gap_hours", 0) or 0)
+    origins = ", ".join(esc(p.get("origin", "?")) for p in participants)
 
-    head = f"{flag} <b>{esc(city)}</b>"
-    if rank:
-        head = f"#{rank}  " + head
+    where = f"{flag} <b>{esc(city)}</b>"
+    if country:
+        where += f", {esc(country)}"
+    head = (f"#{rank}  " + where) if rank else where
 
     lines = [
         head,
-        f"\U0001f4c5 {esc(out)} → {esc(ret)} · {n} night{'s' if n != 1 else ''}",
-        "",
-        f"\U0001f4b0 Flights {eur(total)}",
+        f"\U0001f4c5 {fmt_day(out)} → {fmt_day(ret)}"
+        f" · {n} night{'s' if n != 1 else ''}",
     ]
-    if bag > 0:
-        lines.append(f"\U0001f9f3 Bags +{eur(bag)}")
-    if xfer > 0:
-        lines.append(f"\U0001f686 Transfers +{eur(xfer)}")
-    lines.append(f"\U0001f48e <b>All-in {eur(grand)}</b>")
+    who_line = f"\U0001f465 {people} traveller{'s' if people != 1 else ''}"
+    if origins:
+        who_line += f" from {origins}"
+    lines.append(who_line)
+    lines.append(f"\U0001f6ec Airport: <b>{esc(dest)}</b>"
+                 f" · \U0001f50e via <b>{esc(source)}</b>")
+    if airlines:
+        lines.append(f"\u2708\ufe0f Airlines: {airlines}")
+    if flight_numbers:
+        lines.append(f"\U0001f3ab Flights: {flight_numbers}")
+    if r.get("is_approximate"):
+        lines.append("\u26a0\ufe0f Calendar/estimated fare - verify before booking")
+
+    receipt = [
+        _receipt_row("Flights", total),
+        _receipt_row("Bags", bag),
+        _receipt_row("Transfers", xfer),
+        "─" * 22,
+        _receipt_row("All-in total", grand),
+    ]
+    if people:
+        receipt.append(_receipt_row(f"Per person (x{people})", pp))
+    lines += [
+        "",
+        "\U0001f9fe <b>Group receipt</b>",
+        "<pre>" + "\n".join(receipt) + "</pre>",
+    ]
+    per_night = pp / n if n else 0
+    if per_night:
+        lines.append(f"That is about {eur(per_night)} per person, per night.")
 
     if participants:
-        prices = [float(p.get("price", 0) or 0) for p in participants]
-        mx = max(prices) if prices and max(prices) > 0 else 1.0
-        spread = (max(prices) - min(prices)) if prices else 0
-        lines.append("")
-        for p in participants:
+        person_totals = [_person_total(p) for p in participants]
+        pool = sum(person_totals) or 1.0
+        spread = (max(person_totals) - min(person_totals)) if person_totals else 0
+        cheapest = min(range(len(participants)), key=lambda i: person_totals[i])
+        priciest = max(range(len(participants)), key=lambda i: person_totals[i])
+        lines += ["", "\U0001f3ab <b>Per-person tickets</b>"]
+        for idx, p in enumerate(participants):
             price = float(p.get("price", 0) or 0)
-            bar = "▓" * max(1, int(price / mx * 8))
+            person_bag = float(p.get("bag_cost", 0) or 0)
+            person_xfer = float(p.get("transfer_cost", 0) or 0)
+            person_total = person_totals[idx]
+            share = int(round(person_total / pool * 100))
             who = esc(p.get("label", "?"))
             origin = esc(p.get("origin", "?"))
             airline = esc(p.get("airline", "") or "")
-            suffix = f" · {airline}" if airline else ""
-            lines.append(f"{who} · {origin} · {eur(price)}{suffix}\n{bar}")
-        fair = ("✅ very fair" if spread < 15
-                else ("⚖️ ok" if spread < 50 else "⚠️ uneven"))
-        lines.append(f"spread {eur(spread)} - {fair}")
+            flight_no = esc(p.get("flight_number", "") or "")
+            psource = esc(_source_label(p.get("source") or r.get("source") or ""))
+            stops = _stops_label(p.get("stops", 0))
+            arrival = esc(p.get("arrival_time", "") or "")
+            bag_note = "included" if p.get("bag_included") else eur(person_bag)
+            route_link = p.get("deep_link") or gf_link(p.get("origin", ""), dest, out, ret)
+            tag = ""
+            if len(participants) > 1 and idx == cheapest:
+                tag = " \U0001f4b8 cheapest"
+            elif len(participants) > 1 and idx == priciest:
+                tag = " \U0001f4b0 pays most"
+            meta = [origin, stops, f"via {psource}"]
+            if airline:
+                meta.append(f"airline {airline}")
+            if flight_no:
+                meta.append(f"flight {flight_no}")
+            lines.append(
+                f"• <b>{who}</b> - <b>{eur(person_total)}</b>"
+                f" ({share}% of total){tag}\n"
+                f"  fare {eur(price)} · bag {bag_note} · transfer {eur(person_xfer)}\n"
+                f"  {' · '.join(meta)}"
+            )
+            if arrival:
+                lines.append(f"  arrives {esc(fmt_datetime(arrival))}")
+            lines.append(f"  <a href=\"{route_link}\">Open ticket search</a>")
+        lines.append(f"\n\u2696\ufe0f Fairness: {_fairness(spread)} (spread {eur(spread)})")
+        if arrival_gap > 0:
+            lines.append(
+                f"\U0001f552 Everyone lands within {arrival_gap:.1f}h of each other")
 
     conf = r.get("confidence_label", "")
     if conf:
-        conf_txt = {
-            "HIGH": "price confirmed by multiple sources",
-            "MEDIUM": "sources disagree a little - verify",
-            "SINGLE_SOURCE": "one source only - verify before booking",
-            "SINGLE": "one source only - verify before booking",
-            "LOW": "weak signal - verify before booking",
-        }.get(conf, conf)
-        lines += ["", f"{conf_icon(conf)} {conf_txt}"]
+        lines += ["", f"{conf_icon(conf)} {CONF_TEXT.get(conf, esc(conf))}"]
 
     ver = r.get("verification")
     if ver:
@@ -311,14 +495,7 @@ def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
             vline += f" ({esc(ts)})"
         lines.append(vline)
 
-    if participants:
-        links = " · ".join(
-            f"<a href=\"{gf_link(p.get('origin', ''), dest, out, ret)}\">"
-            f"{esc(p.get('label', '?'))}</a>"
-            for p in participants
-        )
-        lines += ["", f"\U0001f4e4 Book: {links}"]
-
+    lines += ["", "<i>Always verify the final checkout price before booking.</i>"]
     return "\n".join(lines)
 
 
@@ -327,21 +504,27 @@ def fmt_result_detail(r: dict, rank: Optional[int] = None) -> str:
 # ---------------------------------------------------------------------------
 
 def fmt_progress(group_name: str, pct: int, city: str,
-                 elapsed_s: float, found: Optional[int] = None) -> str:
+                 elapsed_s: float, found: Optional[int] = None,
+                 current: Optional[int] = None,
+                 total: Optional[int] = None) -> str:
     eta = ""
     if 0 < pct < 100 and elapsed_s > 5:
         rem = elapsed_s / (pct / 100.0) - elapsed_s
         if rem < 90:
-            eta = f" · ~{int(rem)}s left"
+            eta = f" \u00b7 ~{int(rem)}s left"
         elif rem < 5400:
-            eta = f" · ~{int(rem / 60)}min left"
+            eta = f" \u00b7 ~{int(rem / 60)}min left"
         else:
-            eta = f" · ~{rem / 3600:.1f}h left"
+            eta = f" \u00b7 ~{rem / 3600:.1f}h left"
     found_line = f"\n\U0001f3c6 {found} deal{'s' if found != 1 else ''} so far" \
         if found else ""
+    step_line = ""
+    if current is not None and total:
+        step_line = f"\n{max(0, int(current))}/{max(1, int(total))} checks"
     return (
         f"\U0001f50e <b>Searching - {esc(group_name)}</b>\n\n"
-        f"{progress_bar(pct)}  {pct}%{eta}\n"
+        f"{progress_bar(pct)}  {pct}%{eta}{step_line}\n"
         f"\U0001f4cd now checking: {esc(city or '…')}{found_line}\n\n"
         f"<i>You can close the chat - I'll ping everyone when it's done.</i>"
     )
+

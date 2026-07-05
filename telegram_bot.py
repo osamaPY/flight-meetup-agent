@@ -337,15 +337,66 @@ def _cfg(context, gid):
     return context.user_data[key]
 
 
-def _panel_rows(gid):
+REQUIRED_SETTING_KEYS = ("dates", "nights", "lug", "xfer", "dir", "scope")
+SETTING_LABELS = {
+    "dates": "Dates",
+    "nights": "Nights",
+    "lug": "Luggage",
+    "xfer": "Transfers",
+    "dir": "Flights",
+    "scope": "Where",
+}
+
+
+def _cfg_done(context, gid):
+    key = f"cfg_done_{gid}"
+    if key not in context.user_data:
+        context.user_data[key] = set()
+    return context.user_data[key]
+
+
+def _mark_cfg_done(context, gid, key):
+    if key in REQUIRED_SETTING_KEYS:
+        _cfg_done(context, gid).add(key)
+
+
+def _missing_cfg(context, gid):
+    done = _cfg_done(context, gid)
+    return [key for key in REQUIRED_SETTING_KEYS if key not in done]
+
+
+def _reset_cfg_done(context, gid):
+    context.user_data.pop(f"cfg_done_{gid}", None)
+
+
+def _settings_intro(context, gid):
+    missing = _missing_cfg(context, gid)
+    if not missing:
+        return "\n\n✅ All search settings are confirmed. Ready to launch."
+    labels = ", ".join(SETTING_LABELS[key] for key in missing)
+    return (
+        "\n\n⚙️ <b>Answer every setting before launch</b>\n"
+        f"Still needed: {esc(labels)}"
+    )
+
+
+def _panel_rows(gid, cfg=None, missing=None):
+    """Search settings keyboard with the selected destination scope visible."""
+    scope = (cfg or {}).get("scope", "europe")
+    where_label = {
+        "europe": "🌍 Where: Europe",
+        "schengen": "🛂 Where: Schengen",
+        "anywhere": "🌐 Where: Everywhere",
+    }.get(scope, "🌍 Where")
+    launch_label = "🚀  LAUNCH SEARCH" if not missing else "⚙️ Answer settings first"
     return [
-        [_btn("🚀  LAUNCH SEARCH", f"cfgl_{gid}")],
+        [_btn(launch_label, f"cfgl_{gid}")],
         [_btn("📅 Dates", f"cfgo_{gid}_dates"),
          _btn("🌙 Nights", f"cfgo_{gid}_nights")],
         [_btn("🧳 Luggage", f"cfgo_{gid}_lug"),
          _btn("🚆 Transfers", f"cfgo_{gid}_xfer")],
         [_btn("✈️ Flights", f"cfgo_{gid}_dir"),
-         _btn("🌍 Where", f"cfgo_{gid}_scope")],
+         _btn(where_label, f"cfgo_{gid}_scope")],
         [_btn("⬅️ Back", f"hub_{gid}")],
     ]
 
@@ -358,9 +409,11 @@ async def scr_panel(update, context, gid):
         return
     members = s.get_group_members(gid)
     cfg = _cfg(context, gid)
+    missing = _missing_cfg(context, gid)
     await _show(update, context,
-                ui.fmt_settings_panel(g['name'], len(members), cfg),
-                _panel_rows(gid))
+                ui.fmt_settings_panel(g['name'], len(members), cfg)
+                + _settings_intro(context, gid),
+                _panel_rows(gid, cfg, missing))
 
 
 async def scr_panel_setting(update, context, gid, key):
@@ -370,8 +423,11 @@ async def scr_panel_setting(update, context, gid, key):
     if not g:
         await _show(update, context, "❌ Group not found.", [[HOME_BTN]])
         return
-    base = ui.fmt_settings_panel(g['name'],
-                                 len(Storage().get_group_members(gid)), cfg)
+    base = (
+        ui.fmt_settings_panel(g['name'],
+                              len(Storage().get_group_members(gid)), cfg)
+        + _settings_intro(context, gid)
+    )
     back = _btn("⬅️ Back", f"cfg_{gid}")
 
     if key == "dates":
@@ -447,13 +503,14 @@ async def scr_panel_setting(update, context, gid, key):
 
     elif key == "scope":
         rows = [
-            [_btn("🌍 Europe (recommended)", f"cfgv_{gid}_scope_europe")],
-            [_btn("🛂 Schengen only", f"cfgv_{gid}_scope_schengen")],
+            [_btn("🌍 Europe (includes non-Schengen)", f"cfgv_{gid}_scope_europe")],
+            [_btn("🛂 Schengen countries only", f"cfgv_{gid}_scope_schengen")],
             [_btn("🌐 Everywhere", f"cfgv_{gid}_scope_anywhere")],
             [back],
         ]
         await _show(update, context, base + "\n\n🌍 <b>Where to look?</b>",
                     rows)
+
     else:
         await scr_panel(update, context, gid)
 
@@ -474,7 +531,12 @@ async def cb_panel_set(update, context, gid, key, value_parts):
         cfg['direct'] = value_parts[0] == "1"
     elif key == "scope":
         cfg['scope'] = value_parts[0]
-    await scr_panel(update, context, gid)
+    _mark_cfg_done(context, gid, key)
+    missing = _missing_cfg(context, gid)
+    if missing:
+        await scr_panel_setting(update, context, gid, missing[0])
+    else:
+        await scr_panel(update, context, gid)
 
 
 # ═══════════════════════════ SEARCH RUNNER ═══════════════════════════
@@ -504,6 +566,10 @@ async def launch_search(update, context, gid, cfg=None):
         return
 
     cfg = cfg or _cfg(context, gid)
+    missing = _missing_cfg(context, gid)
+    if missing:
+        await scr_panel_setting(update, context, gid, missing[0])
+        return
     participants = [ParticipantGroup(label=_member_name(m), origins=m['origins'])
                     for m in members]
     req = SearchRequest(
@@ -533,7 +599,7 @@ async def launch_search(update, context, gid, cfg=None):
 
     loop = asyncio.get_running_loop()
     started = time.time()
-    state = {"t": 0.0, "pct": -1}
+    state = {"t": 0.0, "pct": -1, "city": ""}
     requester = _tid(update)
     bot = context.bot
 
@@ -542,22 +608,33 @@ async def launch_search(update, context, gid, cfg=None):
         the event loop. This is the v6 fix: async prog_cb was never awaited."""
         if not tot:
             return
-        pct = int(cur / tot * 100)
+        raw_pct = cur / tot * 100
+        pct = int(raw_pct)
+        if 0 < cur < tot:
+            pct = max(1, min(99, pct))
         now = time.time()
-        if pct == state["pct"]:
+        city = city or ""
+        same_card = pct == state["pct"] and city == state["city"]
+        if same_card:
             return
-        if (now - state["t"]) < 4 and pct < 100:
+        if pct == state["pct"] and (now - state["t"]) < 4 and pct < 100:
             return
-        state.update(t=now, pct=pct)
+        state.update(t=now, pct=pct, city=city)
         context.bot_data[f"scity_{gid}"] = city
-        text = ui.fmt_progress(group_name, pct, city, now - started)
+        s.update_search_status(
+            sid, 'running', progress_current=cur, progress_total=tot,
+            progress_message=city)
+        text = ui.fmt_progress(
+            group_name, pct, city, now - started,
+            current=cur, total=tot)
 
         async def _edit():
             try:
                 await msg.edit_text(text, parse_mode='HTML',
                                     reply_markup=_kb(stop_rows))
-            except BadRequest:
-                pass
+            except BadRequest as exc:
+                if "not modified" not in str(exc).lower():
+                    log_error(f"progress edit failed: {exc}")
 
         asyncio.run_coroutine_threadsafe(_edit(), loop)
 
@@ -609,6 +686,7 @@ async def launch_search(update, context, gid, cfg=None):
                 pass
         finally:
             context.bot_data[f"sa_{gid}"] = False
+            _reset_cfg_done(context, gid)
             s.update_search_status(sid, 'completed')
 
     asyncio.create_task(run())
@@ -663,7 +741,7 @@ async def scr_results(update, context, gid, page=0):
 
     text, page, total_pages = ui.fmt_results_list(g['name'], deduped, page)
 
-    per = 8
+    per = 5
     chunk = deduped[page * per:(page + 1) * per]
     rows = []
     for i in range(0, len(chunk), 2):
@@ -1027,11 +1105,18 @@ async def on_message(update, context):
         cfg['end'] = dates[1] if len(dates) > 1 else (
             datetime.strptime(dates[0], "%Y-%m-%d") + timedelta(days=14)
         ).strftime("%Y-%m-%d")
+        _mark_cfg_done(context, gid, "dates")
+        missing = _missing_cfg(context, gid)
+        if missing:
+            await scr_panel_setting(update, context, gid, missing[0])
+            return
         g = Storage().get_group(gid)
         members = Storage().get_group_members(gid)
         await update.effective_message.reply_text(
-            ui.fmt_settings_panel(g['name'], len(members), cfg),
-            parse_mode='HTML', reply_markup=_kb(_panel_rows(gid)))
+            ui.fmt_settings_panel(g['name'], len(members), cfg)
+            + _settings_intro(context, gid),
+            parse_mode='HTML',
+            reply_markup=_kb(_panel_rows(gid, cfg, missing)))
 
     elif kind == 'paid':
         rid = awaiting['rid']

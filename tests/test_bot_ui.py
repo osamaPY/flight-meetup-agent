@@ -117,6 +117,13 @@ def test_settings_panel_renders_all_settings():
     assert "3 members" in text
 
 
+def test_settings_panel_renders_schengen_scope_label():
+    cfg = ui.default_search_config()
+    cfg["scope"] = "schengen"
+    text = ui.fmt_settings_panel("Crew", 2, cfg)
+    assert "Schengen countries only" in text
+
+
 def test_nights_label_fixed_vs_range():
     assert ui.nights_label({"min_n": 3, "max_n": 3}) == "3 nights"
     assert ui.nights_label({"min_n": 2, "max_n": 4}) == "2-4 nights"
@@ -156,15 +163,44 @@ def test_results_list_empty():
     assert "No deals yet" in text and tp == 1
 
 
+def test_results_list_shows_rich_breakdown():
+    text, _, _ = ui.fmt_results_list(
+        "Crew", [_deal(bag_cost=40.0, transfer_cost=24.0)])
+    assert "€142 all-in" in text
+    assert "pp" in text                              # per-person headline
+    assert "flights" in text and "bags €40" in text and "transfers €24" in text
+    assert "You €60" in text and "Sara €40" in text  # per-person preview
+    assert "all direct" in text                      # connection summary
+
+
+def test_result_detail_cheapest_and_pays_most_tags():
+    text = ui.fmt_result_detail(_deal())
+    assert "cheapest" in text                         # Sara at €40
+    assert "pays most" in text                        # You at €60
+
+
+def test_result_detail_per_night_line():
+    # 3 nights, €142 all-in, 2 people -> ~€71pp -> ~€23/night each
+    text = ui.fmt_result_detail(_deal())
+    assert "per person, per night" in text
+
+
 def test_result_detail_full_card():
     text = ui.fmt_result_detail(_deal(bag_cost=40.0, transfer_cost=24.0), rank=1)
     assert "Vienna" in text
-    assert "All-in €142" in text
-    assert "Bags +€40" in text
-    assert "Transfers +€24" in text
+    assert "Group receipt" in text
+    assert "All-in total" in text and "€142" in text
+    assert "Bags" in text and "€40" in text
+    assert "Transfers" in text and "€24" in text
+    assert "Per person" in text and "€71" in text     # 142 / 2 travellers
+    assert "2 travellers" in text
+    assert "Per-person tickets" in text
+    assert "fare €60" in text
+    assert "% of total" in text                       # per-person share
     assert "You" in text and "Sara" in text
-    assert "spread €20" in text
+    assert "Fairness" in text and "spread €20" in text
     assert "confirmed by multiple sources" in text
+    assert "Open ticket search" in text
     assert "google.com/travel/flights" in text       # booking links
 
 
@@ -199,3 +235,10 @@ def test_progress_card_eta_and_escape():
 def test_progress_card_no_eta_at_zero():
     text = ui.fmt_progress("Crew", 0, "", elapsed_s=1)
     assert "left" not in text
+
+
+def test_progress_card_step_counts():
+    text = ui.fmt_progress("Crew", 1, "Tirana", elapsed_s=2,
+                           current=7, total=500)
+    assert "7/500 checks" in text
+    assert "now checking: Tirana" in text

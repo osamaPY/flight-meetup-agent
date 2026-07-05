@@ -17,6 +17,21 @@ from src.core.scoring import Flight
 
 
 # ---------------------------------------------------------------------------
+# Destination universes
+# ---------------------------------------------------------------------------
+
+def test_schengen_destination_universe_filters_countries():
+    from src.core.airports import get_destinations
+
+    countries = {a.country for a in get_destinations(universe="schengen")}
+    assert {"Italy", "France", "Bulgaria", "Romania"} <= countries
+    assert "United Kingdom" not in countries
+    assert "Ireland" not in countries
+    assert "Albania" not in countries
+    assert "Cyprus" not in countries
+
+
+# ---------------------------------------------------------------------------
 # Registry invariants
 # ---------------------------------------------------------------------------
 
