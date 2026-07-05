@@ -37,7 +37,24 @@ class Logger:
                 console_formatter = logging.Formatter('%(message)s')
                 console_handler.setFormatter(console_formatter)
                 logger.addHandler(console_handler)
-            
+
+                # Mirror every log line into the structured dev log so a full
+                # record (searches, provider outcomes, errors) is readable back.
+                try:
+                    from src.core import devlog
+
+                    class _DevlogHandler(logging.Handler):
+                        def emit(self, record):
+                            try:
+                                devlog.event("log", record.getMessage(),
+                                             level=record.levelname)
+                            except Exception:
+                                pass
+
+                    logger.addHandler(_DevlogHandler())
+                except Exception:
+                    pass
+
             cls._logger = logger
         return cls._logger
 

@@ -19,6 +19,8 @@ from src.core.scoring import score_meetup, rank_results, MeetupResult, Flight
 from src.core.storage import Storage
 from src.core.notifier import Notifier
 from src.core.logger import log_info, log_error
+from src.core import devlog
+import time
 from src.core.provider_factory import build_providers
 from src.core.providers import FlightProvider
 from src.core.smart_search import (
@@ -464,6 +466,19 @@ def booking_mode(
     log_info(f"\n--- {mode_label} ---")
     log_info(f"Participants: {', '.join(f'{p.label} ({p.origins})' for p in req.participants)}")
 
+    _t0 = time.time()
+    devlog.event(
+        "search_start",
+        search_id=req.id if has_search_record else None,
+        participants=[{"label": p.label, "origins": p.origins}
+                      for p in req.participants],
+        scope=req.destination_universe,
+        depart=req.depart_earliest, ret=req.depart_latest,
+        nights=[req.min_nights, req.max_nights],
+        luggage=req.luggage, transfers=req.include_transfers,
+        providers=[p.name() for p in providers],
+    )
+
     previous_top3 = storage.get_all_time_top(3)
 
     # ── Generate date windows from search request ──
@@ -551,10 +566,14 @@ def booking_mode(
     # exactly what's usable so `journalctl -u flight-bot` shows the cause.
     health = {p.name(): p.is_healthy() for p in providers}
     log_info(f"Provider health: {health}")
+    devlog.event("provider_health", **{k.replace(" ", "_"): v
+                                        for k, v in health.items()})
     if not any(health.values()):
         log_error("No providers reported healthy - the server may be unable to "
                   "reach the flight data sources (datacenter IP blocking). "
                   "The search will still attempt every provider once.")
+        devlog.flag("no healthy providers at search start",
+                    providers=list(health.keys()))
 
     for window, date_pairs in exact_pairs_by_window:
         log_info(f"Scanning window {window.depart_earliest} to {window.depart_latest}...")
@@ -680,6 +699,20 @@ def booking_mode(
         log_info("No new matches found.")
 
     stopped = SEARCH_STOP_EVENT.is_set()
+    cities = len({getattr(r, "dest_city", "") or r.destination for r in all_results})
+    devlog.event(
+        "search_end",
+        search_id=req.id if has_search_record else None,
+        results=len(all_results), cities=cities,
+        api_calls=current_calls, seconds=int(time.time() - _t0),
+        stopped=stopped,
+        best_all_in=round(min((r.grand_total for r in all_results), default=0), 2),
+    )
+    if not all_results:
+        devlog.flag("search returned zero results",
+                    search_id=req.id if has_search_record else None,
+                    scope=req.destination_universe, api_calls=current_calls,
+                    providers_healthy=[k for k, v in health.items() if v])
     current_top3 = storage.get_all_time_top(3)
     return SearchRunSummary(
         mode=mode_label,

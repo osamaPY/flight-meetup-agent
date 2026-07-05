@@ -45,6 +45,7 @@ from src.core import bot_ui as ui
 from src.core.bot_ui import esc, eur
 from src.core.config import Config
 from src.core.logger import log_error, log_info
+from src.core import devlog
 from src.core.notifier import Notifier
 from src.core.provider_factory import build_guest_providers, build_providers
 from src.core.search_request import ParticipantGroup, SearchRequest
@@ -717,6 +718,10 @@ async def launch_search(update, context, gid, cfg=None):
     )
     sid = s.create_search(gid, req)
     s.update_search_status(sid, 'running')
+    devlog.event("bot_search_launch", search_id=sid, gid=gid, group=g['name'],
+                 requester=_tid(update), members=len(members),
+                 scope=cfg['scope'], dates=[cfg['start'], cfg['end']],
+                 nights=[cfg['min_n'], cfg['max_n']])
 
     group_name = g['name']
     stop_rows = [[_btn("⏹ Stop search", f"stop_{gid}")]]
@@ -781,6 +786,9 @@ async def launch_search(update, context, gid, cfg=None):
             secs = int(time.time() - started)
             cities = {getattr(r, 'dest_city', '') or r.destination
                       for r in summary.results}
+            devlog.event("bot_search_done", search_id=sid, gid=gid,
+                         results=len(summary.results), cities=len(cities),
+                         seconds=secs, stopped=summary.stopped)
             stopped = " (stopped early)" if summary.stopped else ""
 
             done = (
@@ -812,6 +820,8 @@ async def launch_search(update, context, gid, cfg=None):
                     pass  # member never started the bot - skip silently
         except Exception as e:
             log_error(f"search run failed: {e}")
+            devlog.event("bot_search_error", search_id=sid, gid=gid,
+                         error=str(e)[:300])
             try:
                 await msg.edit_text(
                     f"❌ Search failed: {esc(str(e)[:200])}",
@@ -1615,6 +1625,7 @@ async def on_callback(update, context):
         pass
     d = q.data or ""
     _ensure_user(update)
+    devlog.event("bot_action", action=d, user=_tid(update))
 
     # ── navigation ──
     if d in ("home", "mygroups"):

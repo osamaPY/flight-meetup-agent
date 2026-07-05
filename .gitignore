@@ -14,6 +14,7 @@ __pycache__/
 data/results.csv
 data/leaderboard*.csv
 data/activity.log*
+data/devlog.jsonl
 data/ryanair_cache.json
 data/route_graph.json
 
